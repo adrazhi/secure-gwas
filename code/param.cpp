@@ -16,7 +16,7 @@ bool Param::Convert(string s, T &var, string name) {
 template<class T>
 bool Param::ConvertVector(string s, vector<T> &var, string name) {
   istringstream iss(s);
-  string elem;
+  T elem;
   while (iss.tellg() != -1) {
     iss >> std::skipws >> elem;
     var.push_back(elem);
