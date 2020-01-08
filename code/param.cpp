@@ -125,10 +125,9 @@ bool Param::ParseFile(const char *param_file) {
     } else if (k == "DEBUG") {
       ret = Convert(v, Param::DEBUG, k);
     } else if (k == "CUR_ROUND") {
-      cout << "Test Test Test";
       ret = Convert(v, Param::CUR_ROUND, k);
     } else {
-      cout << "Unknown parameter: " << k << "." << endl;
+      cout << "Unknown parameter: " << k << endl;
       ret = false;
     }
 
@@ -136,13 +135,6 @@ bool Param::ParseFile(const char *param_file) {
       return false;
     }
   }
-
-  cout << "The prefixes are: "; 
-  for (int i = 0; i < Param::CACHE_FILE_PREFIX.size(); i++) 
-      cout << Param::CACHE_FILE_PREFIX[i] << " ";
-  cout << "The numbers are: "; 
-  for (int i = 0; i < Param::NUM_INDS.size(); i++) 
-      cout << Param::NUM_INDS[i] << " ";   
 
   return true;
 }
