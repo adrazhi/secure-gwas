@@ -128,7 +128,7 @@ bool Param::ParseFile(const char *param_file) {
       cout << "Test Test Test";
       ret = Convert(v, Param::CUR_ROUND, k);
     } else {
-      cout << "Unknown parameter: " << k << endl;
+      cout << "Unknown parameter: " << k << "." << endl;
       ret = false;
     }
 
