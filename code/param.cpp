@@ -186,6 +186,8 @@ double Param::HWE_UB = 28.3740;
 long Param::LD_DIST_THRES = 1000000;
 long Param::DIV_MAX_N = 100000;
 
+int Param::CUR_ROUND = 0;
+
 long Param::NUM_INDS = 1000;
 long Param::NUM_SNPS = 1000;
 long Param::NUM_COVS = 10;
