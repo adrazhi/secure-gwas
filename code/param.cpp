@@ -173,7 +173,7 @@ int Param::NUM_OVERSAMPLE = 10;
 int Param::NUM_POWER_ITER = 5;
 
 string Param::OUTPUT_FILE_PREFIX = "../out/test";
-string Param::CACHE_FILE_PREFIX;
+vector<string> Param::CACHE_FILE_PREFIX;
 string Param::LOG_FILE = "../log/log.txt";
 string Param::SNP_POS_FILE = "../test_data/pos.txt";
 
@@ -189,7 +189,7 @@ long Param::DIV_MAX_N = 100000;
 
 int Param::CUR_ROUND = 0;
 
-long Param::NUM_INDS;
+vector<long> Param::NUM_INDS;
 long Param::NUM_SNPS = 1000;
 long Param::NUM_COVS = 10;
 
