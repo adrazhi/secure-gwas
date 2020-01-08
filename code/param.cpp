@@ -14,11 +14,11 @@ bool Param::Convert(string s, T &var, string name) {
 }
 
 template<class T>
-bool Param::ConvertVector(string s, T &var, string name) {
+bool Param::ConvertVector(string s, vector<T> &var, string name) {
   istringstream iss(s);
   string elem;
   while (iss.tellg() != -1) {
-    iss >> std:skipws >> elem;
+    iss >> std::skipws >> elem;
     var.push_back(elem);
   }
   return true;
@@ -173,7 +173,7 @@ int Param::NUM_OVERSAMPLE = 10;
 int Param::NUM_POWER_ITER = 5;
 
 string Param::OUTPUT_FILE_PREFIX = "../out/test";
-string Param::CACHE_FILE_PREFIX = "../cache/test";
+string Param::CACHE_FILE_PREFIX;
 string Param::LOG_FILE = "../log/log.txt";
 string Param::SNP_POS_FILE = "../test_data/pos.txt";
 
@@ -189,7 +189,7 @@ long Param::DIV_MAX_N = 100000;
 
 int Param::CUR_ROUND = 0;
 
-long Param::NUM_INDS = 1000;
+long Param::NUM_INDS;
 long Param::NUM_SNPS = 1000;
 long Param::NUM_COVS = 10;
 

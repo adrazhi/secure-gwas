@@ -88,7 +88,7 @@ class Param {
     template<class T>
     static bool Convert(string s, T &var, string name);
     template<class T>
-    static bool ConvertVector(string s, T &var, string name);
+    static bool ConvertVector(string s, vector<T> &var, string name);
     static bool ParseFile(const char *param_file);
 };
 
