@@ -47,6 +47,12 @@ string cache(int pid, string desc) {
   return oss.str();
 }
 
+string cache(int pid, int index, string desc) {
+  ostringstream oss;
+  oss << Param::CACHE_FILE_PREFIX[index] << "_" << desc << ".bin";
+  return oss.str();
+}
+
 string cache(int pid, int index) {
   ostringstream oss;
   oss << Param::CACHE_FILE_PREFIX[Param::CUR_ROUND] << "_" << index << ".bin";
@@ -555,7 +561,10 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   SetNumThreads(Param::NUM_THREADS);
   cout << AvailableThreads() << " threads created" << endl;
 
-  int n0 = Param::NUM_INDS[Param::CUR_ROUND];
+  int n0 = 0; // total number of individuals across datasets
+  for (int i = 0; i < Param::NUM_INDS.size(); i++) {
+    n0 += Param::NUM_INDS[i];
+  }
   int m0 = Param::NUM_SNPS;
   int k = Param::NUM_DIM_TO_REMOVE;
   int kp = k + Param::NUM_OVERSAMPLE;
@@ -603,19 +612,39 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   Mat<ZZ_p> cov;
   Init(cov, n0, Param::NUM_COVS);
 
-  if (!exists(cache(pid, "input_geno")) || !exists(cache(pid, "input_pheno_cov"))) {
-    cout << "Initial data sharing results not found:" << endl;
-    cout << "\t" << cache(pid, "input_geno") << endl;
-    cout << "\t" << cache(pid, "input_pheno_cov") << endl;
-    return false;
+  rolling_n0 = 0;
+  for (int i = 0; i < Param::NUM_INDS.size(); i++) {
+    sub_n0 = Param::NUM_INDS[i];
+  
+    if (!exists(cache(pid, i, "input_geno")) || !exists(cache(pid, i, "input_pheno_cov"))) {
+      cout << "Initial data sharing results not found:" << endl;
+      cout << "\t" << cache(pid, i, "input_geno") << endl;
+      cout << "\t" << cache(pid, i, "input_pheno_cov") << endl;
+      return false;
+    }
+
+    cout << "Initial data sharing results found" << endl;
+
+    ifs.open(cache(pid, i, "input_pheno_cov").c_str(), ios::binary);
+
+    Vec<ZZ_p> sub_pheno;
+    Init(sub_pheno, sub_n0);
+    mpc.ReadFromFile(sub_pheno, ifs, sub_n0);
+    for (int j = 0; j < sub_pheno.size(); j++) {
+      pheno[rolling_n0 + j] = sub_pheno[j];
+    }
+
+    Mat<ZZ_p> sub_cov;
+    Init(sub_cov, sub_n0, Param::NUM_COVS);
+    mpc.ReadFromFile(sub_cov, ifs, sub_n0, Param::NUM_COVS);
+    for (int j = 0; j < sub_cov.size(); j++) {
+      cov[rolling_n0 + j] = sub_cov[j];
+    }
+
+    rolling_n0 += sub_n0;
+
+    ifs.close();
   }
-
-  cout << "Initial data sharing results found" << endl;
-
-  ifs.open(cache(pid, "input_pheno_cov").c_str(), ios::binary);
-  mpc.ReadFromFile(pheno, ifs, n0);
-  mpc.ReadFromFile(cov, ifs, n0, Param::NUM_COVS);
-  ifs.close();
 
   cout << "Phenotypes and covariates loaded" << endl;
 
