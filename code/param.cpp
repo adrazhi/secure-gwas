@@ -13,6 +13,17 @@ bool Param::Convert(string s, T &var, string name) {
   return true;
 }
 
+template<class T>
+bool Param::ConvertVector(string s, T &var, string name) {
+  istringstream iss(s);
+  string elem;
+  while (iss.tellg() != -1) {
+    iss >> std:skipws >> elem;
+    var.push_back(elem);
+  }
+  return true;
+}
+
 bool Param::ParseFile(const char *param_file) {
   ifstream pfile(param_file);
   if (!pfile.is_open()) {
@@ -81,7 +92,7 @@ bool Param::ParseFile(const char *param_file) {
     } else if (k == "LOG_FILE") {
       ret = Convert(v, Param::LOG_FILE, k);
     } else if (k == "CACHE_FILE_PREFIX") {
-      ret = Convert(v, Param::CACHE_FILE_PREFIX, k);
+      ret = ConvertVector(v, Param::CACHE_FILE_PREFIX, k);
       if (v[v.size() - 1] != '/') v += "/";
     } else if (k == "SNP_POS_FILE") {
       ret = Convert(v, Param::SNP_POS_FILE, k);
@@ -106,7 +117,7 @@ bool Param::ParseFile(const char *param_file) {
     } else if (k == "LD_DIST_THRES") {
       ret = Convert(v, Param::LD_DIST_THRES, k);
     } else if (k == "NUM_INDS") {
-      ret = Convert(v, Param::NUM_INDS, k);
+      ret = ConvertVector(v, Param::NUM_INDS, k);
     } else if (k == "NUM_SNPS") {
       ret = Convert(v, Param::NUM_SNPS, k);
     } else if (k == "NUM_COVS") {
@@ -122,6 +133,13 @@ bool Param::ParseFile(const char *param_file) {
       return false;
     }
   }
+
+  cout << "The prefixes are: "; 
+  for (int i = 0; i < Param::CACHE_FILE_PREFIX.size(); i++) 
+      cout << Param::CACHE_FILE_PREFIX[i] << " ";
+  cout << "The numbers are: "; 
+  for (int i = 0; i < Param::NUM_INDS.size(); i++) 
+      cout << Param::NUM_INDS[i] << " ";   
 
   return true;
 }

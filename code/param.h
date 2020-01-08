@@ -2,6 +2,7 @@
 #define __PARAM_H__
 
 #include <iostream>
+#include <vector> 
 using namespace std;
 
 class Param {
@@ -26,7 +27,7 @@ class Param {
     static string SNP_POS_FILE; // genomic positions for SNPs in the data
     static string LOG_FILE; // runtime/communication profiler output file
     static string OUTPUT_FILE_PREFIX; // prefix for GWAS output (P2 only)
-    static string CACHE_FILE_PREFIX; // prefix for cache files; includes
+    static vector<string> CACHE_FILE_PREFIX; // prefix for each cache files; includes
                                      // input shares, which can be large
 
     /* Secret sharing parameters (see Supplementary Information) */
@@ -60,8 +61,14 @@ class Param {
     static long LD_DIST_THRES; // genomic distance threshold
                                // for selecting SNPs for PCA
     
+    /* This variable is used to signify which 'round' of data sharing we are in.
+    When multiple parties are contributing data, this variable is used as an index
+    into array-type parameters (such as NUM_INDS and CACHE_FILE_PREFIX) to determine
+    which specific cache file we are currently updating.*/
+    static int CUR_ROUND;
+
     /* Data dimensions */
-    static long NUM_INDS; // number of individuals
+    static vector<long> NUM_INDS; // number of individuals in each dataset
     static long NUM_SNPS; // number of SNPs
     static long NUM_COVS; // number of covariate features
 
@@ -80,6 +87,8 @@ class Param {
     /* Helper functions */
     template<class T>
     static bool Convert(string s, T &var, string name);
+    template<class T>
+    static bool ConvertVector(string s, T &var, string name);
     static bool ParseFile(const char *param_file);
 };
 
