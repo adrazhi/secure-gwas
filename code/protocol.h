@@ -925,8 +925,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       mpc.ProfilerPushState("miss_filt");
 
-      // TODO: done updating until here
-
       // Individual missingness filter
       cout << "Individual missing rate filter ... "; tic();
       ZZ_p imiss_ub = ZZ_p((long) (m1 * Param::IMISS_UB));
@@ -1038,17 +1036,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   } else {
     cout << "Taking a pass to calculate genotype statistics:" << endl;
 
-    ifs.open(cache(pid, "input_geno").c_str(), ios::binary);
-    if (pid > 0) {
-      mpc.ImportSeed(10, ifs);
-    } else {
-      for (int p = 1; p <= 2; p++) {
-        mpc.ImportSeed(10 + p, ifs);
-      }
-    }
-
-    long report_bsize = n1 / 10;
-
     long bsize = Param::PITER_BATCH_SIZE;
 
     // Containers for batching the computation
@@ -1069,124 +1056,143 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     ctrl_vec.SetLength(bsize);
     ctrl_mask_vec.SetLength(bsize);
 
+    long report_bsize = n1 / 10;
     ind = -1;
     tic();
-    for (int i = 0; i < n1; i++) {
-      ind++;
 
-      mpc.ProfilerPushState("file_io/rng");
+    // Loop over all datasets to calculate genotype statistics over all individuals
+    for (int dataset_idx = 0; dataset_idx < Param::NUM_INDS.size(); dataset_idx++) {
+      ifs.open(cache(pid, dataset_idx, "input_geno").c_str(), ios::binary);
+      if (pid > 0) {
+        mpc.ImportSeed(10, ifs);
+      } else {
+        for (int p = 1; p <= 2; p++) {
+          mpc.ImportSeed(10 + p, ifs);
+        }
+      }
 
-      Mat<ZZ_p> g0, g0_mask;
-      Vec<ZZ_p> miss0, miss0_mask;
+      // Iterate over this dataset, considering only those individuals who have not been filtered out
+      // TODO: here on out isn't done yet. For this part, a bit tricky - before, we looped over sub_n0
+      // and updated reads of i with i + rolling_n0. Now, we need to do the same but with sub_n1 and 
+      // rolling_n1 - i.e., for each dataset, we need the number of "keep" individuals sub_n1
+      // will have to calculate that above, where n1 is calculated
+      for (int i = 0; i < n1; i++) {
+        ind++;
 
-      while (ikeep[ind] != 1) {
+        mpc.ProfilerPushState("file_io/rng");
+
+        Mat<ZZ_p> g0, g0_mask;
+        Vec<ZZ_p> miss0, miss0_mask;
+
+        while (ikeep[ind] != 1) {
+          if (pid > 0) {
+            mpc.SkipData(ifs, 3, m0); // g
+            mpc.SkipData(ifs, m0); // miss
+
+            mpc.SwitchSeed(10);
+            mpc.RandMat(g0_mask, 3, m0);
+            mpc.RandVec(miss0_mask, m0);
+            mpc.RestoreSeed();
+          } else {
+            for (int p = 1; p <= 2; p++) {
+              mpc.SwitchSeed(10 + p);
+              mpc.RandMat(g0_mask, 3, m0);
+              mpc.RandVec(miss0_mask, m0);
+              mpc.RestoreSeed();
+            }
+          }
+          ind++;
+        }
+
         if (pid > 0) {
-          mpc.SkipData(ifs, 3, m0); // g
-          mpc.SkipData(ifs, m0); // miss
+          mpc.ReadFromFile(g0, ifs, 3, m0); // g
+          mpc.ReadFromFile(miss0, ifs, m0); // miss
 
           mpc.SwitchSeed(10);
           mpc.RandMat(g0_mask, 3, m0);
           mpc.RandVec(miss0_mask, m0);
           mpc.RestoreSeed();
         } else {
+          Init(g0, 3, m0);
+          Init(g0_mask, 3, m0);
+          Init(miss0, m0);
+          Init(miss0_mask, m0);
+
           for (int p = 1; p <= 2; p++) {
             mpc.SwitchSeed(10 + p);
-            mpc.RandMat(g0_mask, 3, m0);
-            mpc.RandVec(miss0_mask, m0);
+            mpc.RandMat(tmp_mat, 3, m0);
+            mpc.RandVec(tmp_vec, m0);
             mpc.RestoreSeed();
+
+            g0_mask += tmp_mat;
+            miss0_mask += tmp_vec;
           }
         }
-        ind++;
-      }
+        
+        mpc.ProfilerPopState(false); // file_io/rng
 
-      if (pid > 0) {
-        mpc.ReadFromFile(g0, ifs, 3, m0); // g
-        mpc.ReadFromFile(miss0, ifs, m0); // miss
-
-        mpc.SwitchSeed(10);
-        mpc.RandMat(g0_mask, 3, m0);
-        mpc.RandVec(miss0_mask, m0);
-        mpc.RestoreSeed();
-      } else {
-        Init(g0, 3, m0);
-        Init(g0_mask, 3, m0);
-        Init(miss0, m0);
-        Init(miss0_mask, m0);
-
-        for (int p = 1; p <= 2; p++) {
-          mpc.SwitchSeed(10 + p);
-          mpc.RandMat(tmp_mat, 3, m0);
-          mpc.RandVec(tmp_vec, m0);
-          mpc.RestoreSeed();
-
-          g0_mask += tmp_mat;
-          miss0_mask += tmp_vec;
+        // Filter out loci that failed missing rate filter
+        int ind2 = 0;
+        for (int j = 0; j < m0; j++) {
+          if (gkeep1[j] == 1) {
+            for (int k = 0; k < 3; k++) {
+              g[k][i % bsize][ind2] = g0[k][j];
+              g_mask[k][i % bsize][ind2] = g0_mask[k][j];
+            }
+            miss[i % bsize][ind2] = miss0[j];
+            miss_mask[i % bsize][ind2] = miss0_mask[j];
+            ind2++;
+          }
         }
-      }
-      
-      mpc.ProfilerPopState(false); // file_io/rng
 
-      // Filter out loci that failed missing rate filter
-      int ind2 = 0;
-      for (int j = 0; j < m0; j++) {
-        if (gkeep1[j] == 1) {
+        dosage[i % bsize] = g[1][i % bsize] + 2 * g[2][i % bsize];
+        dosage_mask[i % bsize] = g_mask[1][i % bsize] + 2 * g_mask[2][i % bsize];
+
+        ctrl_vec[i % bsize] = ctrl[i];
+        ctrl_mask_vec[i % bsize] = ctrl_mask[i];
+
+        // Update running sums
+        if (pid > 0) {
+          n1_ctrl += ctrl_mask[i];
+          gmiss += miss_mask[i % bsize];
+          dosage_sum += dosage_mask[i % bsize];
+
+          if (pid == 1) {
+            n1_ctrl += ctrl[i];
+            gmiss += miss[i % bsize];
+            dosage_sum += dosage[i % bsize];
+          }
+        }
+
+        if (i % bsize == bsize - 1 || i == n1 - 1) {
+          if (i % bsize < bsize - 1) {
+            int new_bsize = (i % bsize) + 1;
+            for (int k = 0; k < 3; k++) {
+              g[k].SetDims(new_bsize, m1);
+              g_mask[k].SetDims(new_bsize, m1);
+            }
+            dosage.SetDims(new_bsize, m1);
+            dosage_mask.SetDims(new_bsize, m1);
+            miss.SetDims(new_bsize, m1);
+            miss_mask.SetDims(new_bsize, m1);
+            ctrl_vec.SetLength(new_bsize);
+            ctrl_mask_vec.SetLength(new_bsize);
+          }
+
+          mpc.BeaverMult(gmiss_ctrl, ctrl_vec, ctrl_mask_vec, miss, miss_mask);
+          mpc.BeaverMult(dosage_sum_ctrl, ctrl_vec, ctrl_mask_vec, dosage, dosage_mask);
           for (int k = 0; k < 3; k++) {
-            g[k][i % bsize][ind2] = g0[k][j];
-            g_mask[k][i % bsize][ind2] = g0_mask[k][j];
+            mpc.BeaverMult(g_count_ctrl[k], ctrl_vec, ctrl_mask_vec, g[k], g_mask[k]);
           }
-          miss[i % bsize][ind2] = miss0[j];
-          miss_mask[i % bsize][ind2] = miss0_mask[j];
-          ind2++;
+        }
+
+        if ((i + 1) % report_bsize == 0 || i == n1 - 1) {
+          cout << "\t" << i+1 << " / " << n1 << ", "; toc(); tic();
         }
       }
 
-      dosage[i % bsize] = g[1][i % bsize] + 2 * g[2][i % bsize];
-      dosage_mask[i % bsize] = g_mask[1][i % bsize] + 2 * g_mask[2][i % bsize];
-
-      ctrl_vec[i % bsize] = ctrl[i];
-      ctrl_mask_vec[i % bsize] = ctrl_mask[i];
-
-      // Update running sums
-      if (pid > 0) {
-        n1_ctrl += ctrl_mask[i];
-        gmiss += miss_mask[i % bsize];
-        dosage_sum += dosage_mask[i % bsize];
-
-        if (pid == 1) {
-          n1_ctrl += ctrl[i];
-          gmiss += miss[i % bsize];
-          dosage_sum += dosage[i % bsize];
-        }
-      }
-
-      if (i % bsize == bsize - 1 || i == n1 - 1) {
-        if (i % bsize < bsize - 1) {
-          int new_bsize = (i % bsize) + 1;
-          for (int k = 0; k < 3; k++) {
-            g[k].SetDims(new_bsize, m1);
-            g_mask[k].SetDims(new_bsize, m1);
-          }
-          dosage.SetDims(new_bsize, m1);
-          dosage_mask.SetDims(new_bsize, m1);
-          miss.SetDims(new_bsize, m1);
-          miss_mask.SetDims(new_bsize, m1);
-          ctrl_vec.SetLength(new_bsize);
-          ctrl_mask_vec.SetLength(new_bsize);
-        }
-
-        mpc.BeaverMult(gmiss_ctrl, ctrl_vec, ctrl_mask_vec, miss, miss_mask);
-        mpc.BeaverMult(dosage_sum_ctrl, ctrl_vec, ctrl_mask_vec, dosage, dosage_mask);
-        for (int k = 0; k < 3; k++) {
-          mpc.BeaverMult(g_count_ctrl[k], ctrl_vec, ctrl_mask_vec, g[k], g_mask[k]);
-        }
-      }
-
-      if ((i + 1) % report_bsize == 0 || i == n1 - 1) {
-        cout << "\t" << i+1 << " / " << n1 << ", "; toc(); tic();
-      }
+      ifs.close();
     }
-
-    ifs.close();
 
     mpc.BeaverReconstruct(gmiss_ctrl);
     mpc.BeaverReconstruct(dosage_sum_ctrl);
