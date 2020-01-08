@@ -711,43 +711,48 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         cout << "Taking a pass to calculate locus missing rates:" << endl;
 
         if (pid > 0) {
-          ifs.open(cache(pid, "input_geno").c_str(), ios::binary);
+          // Loop over all datasets to calculate missing rate across all individuals
+          for (int i = 0; i < Param::NUM_INDS.size(); i++) {
+            sub_n0 = Param::NUM_INDS[i];
 
-          mpc.ImportSeed(10, ifs);
+            ifs.open(cache(pid, i, "input_geno").c_str(), ios::binary);
 
-          long bsize = n0 / 10;
+            mpc.ImportSeed(10, ifs);
 
-          tic();
-          for (int i = 0; i < n0; i++) {
-            Vec<ZZ_p> miss, miss_mask;
+            long bsize = sub_n0 / 10;
 
-            // Load stored Beaver partition
-            mpc.SwitchSeed(10);
-            mpc.RandMat(tmp_mat, 3, m0); // g_mask
-            mpc.RandVec(miss_mask, m0);
-            mpc.RestoreSeed();
+            tic();
+            for (int j = 0; j < sub_n0; j++) {
+              Vec<ZZ_p> miss, miss_mask;
 
-            if (pid == 2) {
-              mpc.SkipData(ifs, 3, m0);
-              mpc.ReadFromFile(miss, ifs, m0);
+              // Load stored Beaver partition
+              mpc.SwitchSeed(10);
+              mpc.RandMat(tmp_mat, 3, m0); // g_mask
+              mpc.RandVec(miss_mask, m0);
+              mpc.RestoreSeed();
+
+              if (pid == 2) {
+                mpc.SkipData(ifs, 3, m0);
+                mpc.ReadFromFile(miss, ifs, m0);
+              }
+
+              // Recover secret shares from Beaver partition
+              if (pid == 1) {
+                miss = miss_mask;
+              } else {
+                miss += miss_mask;
+              }
+
+              // Add to running sum
+              gmiss += miss;
+
+              if ((j + 1) % bsize == 0 || j == sub_n0 - 1) {
+                cout << "\t" << j+1 << " / " << sub_n0 << ", "; toc(); tic();
+              }
             }
 
-            // Recover secret shares from Beaver partition
-            if (pid == 1) {
-              miss = miss_mask;
-            } else {
-              miss += miss_mask;
-            }
-
-            // Add to running sum
-            gmiss += miss;
-
-            if ((i + 1) % bsize == 0 || i == n0 - 1) {
-              cout << "\t" << i+1 << " / " << n0 << ", "; toc(); tic();
-            }
+            ifs.close();
           }
-
-          ifs.close();
         }
 
         fs.open(cache(pid, "gmiss").c_str(), ios::out | ios::binary);
