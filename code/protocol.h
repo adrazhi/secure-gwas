@@ -580,6 +580,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   int ind;
   Vec<ZZ_p> tmp_vec;
   Mat<ZZ_p> tmp_mat;
+  long rolling_n0;
+  long sub_n0;
 
   mpc.ProfilerPushState("main");
 
@@ -858,50 +860,57 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         mpc.ProfilerPushState("data_scan");
 
         if (pid > 0) {
-          ifs.open(cache(pid, "input_geno").c_str(), ios::binary);
+          // Loop over all datasets to calculate individual missing/heterozygous rate for all individuals
+          rolling_n0 = 0;
+          for (int i = 0; i < Param::NUM_INDS.size(); i++) {
+            sub_n0 = Param::NUM_INDS[i];
 
-          mpc.ImportSeed(10, ifs);
+            ifs.open(cache(pid, i, "input_geno").c_str(), ios::binary);
 
-          long bsize = n0 / 10;
+            mpc.ImportSeed(10, ifs);
 
-          tic();
-          for (int i = 0; i < n0; i++) {
-            Mat<ZZ_p> g, g_mask;
-            Vec<ZZ_p> miss, miss_mask;
+            long bsize = sub_n0 / 10;
 
-            // Load stored Beaver partition
-            mpc.SwitchSeed(10);
-            mpc.RandMat(g_mask, 3, m0);
-            mpc.RandVec(miss_mask, m0);
-            mpc.RestoreSeed();
+            tic();
+            for (int j = 0; j < sub_n0; j++) {
+              Mat<ZZ_p> g, g_mask;
+              Vec<ZZ_p> miss, miss_mask;
 
-            if (pid == 2) {
-              mpc.ReadFromFile(g, ifs, 3, m0);
-              mpc.ReadFromFile(miss, ifs, m0);
-            }
+              // Load stored Beaver partition
+              mpc.SwitchSeed(10);
+              mpc.RandMat(g_mask, 3, m0);
+              mpc.RandVec(miss_mask, m0);
+              mpc.RestoreSeed();
 
-            // Recover secret shares from Beaver partition
-            if (pid == 1) {
-              g = g_mask;
-              miss = miss_mask;
-            } else {
-              g += g_mask;
-              miss += miss_mask;
-            }
+              if (pid == 2) {
+                mpc.ReadFromFile(g, ifs, 3, m0);
+                mpc.ReadFromFile(miss, ifs, m0);
+              }
 
-            // Add to running sum
-            for (int j = 0; j < m0; j++) {
-              if (gkeep1[j] == 1) {
-                imiss[i] += miss[j];
-                ihet[i] += g[1][j];
+              // Recover secret shares from Beaver partition
+              if (pid == 1) {
+                g = g_mask;
+                miss = miss_mask;
+              } else {
+                g += g_mask;
+                miss += miss_mask;
+              }
+
+              // Add to running sum
+              for (int k = 0; k < m0; k++) {
+                if (gkeep1[k] == 1) {
+                  imiss[rolling_n0 + j] += miss[k];
+                  ihet[rolling_n0 + j] += g[1][k];
+                }
+              }
+
+              if ((j + 1) % bsize == 0 || j == sub_n0 - 1) {
+                cout << "\t" << j+1 << " / " << sub_n0 << ", "; toc(); tic();
               }
             }
-
-            if ((i + 1) % bsize == 0 || i == n0 - 1) {
-              cout << "\t" << i+1 << " / " << n0 << ", "; toc(); tic();
-            }
+            ifs.close();
+            rolling_n0 += sub_n0;
           }
-          ifs.close();
         }
 
         fs.open(cache(pid, "imiss_ihet").c_str(), ios::out | ios::binary);
@@ -915,6 +924,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       }
 
       mpc.ProfilerPushState("miss_filt");
+
+      // TODO: done updating until here
 
       // Individual missingness filter
       cout << "Individual missing rate filter ... "; tic();
