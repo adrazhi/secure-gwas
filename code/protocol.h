@@ -43,13 +43,13 @@ bool DecrComp(const pair<int, double> &a, const pair<int, double> &b) {
 
 string cache(int pid, string desc) {
   ostringstream oss;
-  oss << Param::CACHE_FILE_PREFIX << "_" << desc << ".bin";
+  oss << Param::CACHE_FILE_PREFIX[Param::CUR_ROUND] << "_" << desc << ".bin";
   return oss.str();
 }
 
 string cache(int pid, int index) {
   ostringstream oss;
-  oss << Param::CACHE_FILE_PREFIX << "_" << index << ".bin";
+  oss << Param::CACHE_FILE_PREFIX[Param::CUR_ROUND] << "_" << index << ".bin";
   return oss.str();
 }
 
@@ -65,7 +65,8 @@ bool logireg_protocol(MPCEnv& mpc, int pid) {
 
   int ntop = 100;
 
-  int n0 = Param::NUM_INDS;
+  // need to update logireg_protocol function to be compatible with multiple input datasets
+  int n0 = Param::NUM_INDS[Param::CUR_ROUND];
   int m0 = Param::NUM_SNPS;
   int k = Param::NUM_DIM_TO_REMOVE;
 
@@ -468,7 +469,7 @@ bool logireg_protocol(MPCEnv& mpc, int pid) {
 }
 
 bool data_sharing_protocol(MPCEnv& mpc, int pid) {
-  int n = Param::NUM_INDS;
+  int n = Param::NUM_INDS[Param::CUR_ROUND];
 
   fstream fs;
 
@@ -554,7 +555,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   SetNumThreads(Param::NUM_THREADS);
   cout << AvailableThreads() << " threads created" << endl;
 
-  int n0 = Param::NUM_INDS;
+  int n0 = Param::NUM_INDS[Param::CUR_ROUND];
   int m0 = Param::NUM_SNPS;
   int k = Param::NUM_DIM_TO_REMOVE;
   int kp = k + Param::NUM_OVERSAMPLE;

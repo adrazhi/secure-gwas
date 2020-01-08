@@ -141,7 +141,7 @@ bool send_stream(string data_dir, MPCEnv& mpc, int mode) {
     lineno++;
   }
 
-  if (lineno != Param::NUM_INDS) {
+  if (lineno != Param::NUM_INDS[Param::CUR_ROUND]) {
     cout << "Error: data matrix does not have NUM_INDS rows" << endl;
     return false;
   }

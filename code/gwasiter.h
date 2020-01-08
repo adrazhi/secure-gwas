@@ -26,7 +26,7 @@ public:
     this->missing_flag = missing_flag;
 
     index = 0;
-    num_left = Param::NUM_INDS;
+    num_left = Param::NUM_INDS[Param::CUR_ROUND];
     if (pid == 1) {
       mpc->SendInt(TransferMode(), 3);
     }
