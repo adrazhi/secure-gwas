@@ -485,7 +485,7 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid) {
   Mat<ZZ_p> cov;
   Init(cov, n, Param::NUM_COVS);
 
-  fs.open(cache(pid, "input_geno").c_str(), ios::out | ios::binary);
+  fs.open(cache(pid, Param::CUR_ROUND, "input_geno").c_str(), ios::out | ios::binary);
   if (pid > 0) {
     mpc.ExportSeed(fs, 0);
   } else {
@@ -547,7 +547,7 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid) {
     mpc.Print(cov[0], 5);
   }
 
-  fs.open(cache(pid, "input_pheno_cov").c_str(), ios::out | ios::binary);
+  fs.open(cache(pid, Param::CUR_ROUND, "input_pheno_cov").c_str(), ios::out | ios::binary);
   mpc.WriteToFile(pheno, fs);
   mpc.WriteToFile(cov, fs);
   fs.close();
@@ -2254,15 +2254,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   } else {
 
-    ifs.open(cache(pid, "input_geno").c_str(), ios::binary);
-    if (pid > 0) {
-      mpc.ImportSeed(10, ifs);
-    } else {
-      for (int p = 1; p <= 2; p++) {
-        mpc.ImportSeed(10 + p, ifs);
-      }
-    }
-
     long bsize = Param::PITER_BATCH_SIZE;
 
     cout << "Allocating batch variables ... ";
@@ -2301,120 +2292,135 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     }
 
     ind = -1;
+    rolling_n1 = 0;
     tic();
     mpc.ProfilerPushState("file_io/rng");
     cout << "GWAS pass:" << endl;
-    for (int cur = 0; cur < n1; cur++) {
-      ind++;
 
-      Mat<ZZ_p> g0, g0_mask;
-      Vec<ZZ_p> miss0, miss0_mask;
+    for (int dataset_idx = 0; dataset_idx < Param::NUM_INDS.size(); dataset_idx++) {
+      ifs.open(cache(pid, dataset_idx, "input_geno").c_str(), ios::binary);
+      if (pid > 0) {
+        mpc.ImportSeed(10, ifs);
+      } else {
+        for (int p = 1; p <= 2; p++) {
+          mpc.ImportSeed(10 + p, ifs);
+        }
+      }
 
-      while (ikeep[ind] != 1) {
+      sub_n1 = n1_vec[dataset_idx];
+      for (int cur = rolling_n1; i < rolling_n1 + sub_n1; i++) {
+        ind++;
+
+        Mat<ZZ_p> g0, g0_mask;
+        Vec<ZZ_p> miss0, miss0_mask;
+
+        while (ikeep[ind] != 1) {
+          if (pid > 0) {
+            mpc.SkipData(ifs, 3, m0); // g
+            mpc.SkipData(ifs, m0); // miss
+
+            mpc.SwitchSeed(10);
+            mpc.RandMat(g0_mask, 3, m0);
+            mpc.RandVec(miss0_mask, m0);
+            mpc.RestoreSeed();
+          } else {
+            for (int p = 1; p <= 2; p++) {
+              mpc.SwitchSeed(10 + p);
+              mpc.RandMat(g0_mask, 3, m0);
+              mpc.RandVec(miss0_mask, m0);
+              mpc.RestoreSeed();
+            }
+          }
+          ind++;
+        }
+
         if (pid > 0) {
-          mpc.SkipData(ifs, 3, m0); // g
-          mpc.SkipData(ifs, m0); // miss
+          mpc.ReadFromFile(g0, ifs, 3, m0); // g
+          mpc.ReadFromFile(miss0, ifs, m0); // miss
 
           mpc.SwitchSeed(10);
           mpc.RandMat(g0_mask, 3, m0);
           mpc.RandVec(miss0_mask, m0);
           mpc.RestoreSeed();
         } else {
+          Init(g0, 3, m0);
+          Init(g0_mask, 3, m0);
+          Init(miss0, m0);
+          Init(miss0_mask, m0);
+
           for (int p = 1; p <= 2; p++) {
             mpc.SwitchSeed(10 + p);
-            mpc.RandMat(g0_mask, 3, m0);
-            mpc.RandVec(miss0_mask, m0);
+            mpc.RandMat(tmp_mat, 3, m0);
+            mpc.RandVec(tmp_vec, m0);
             mpc.RestoreSeed();
+
+            g0_mask += tmp_mat;
+            miss0_mask += tmp_vec;
           }
         }
-        ind++;
-      }
-
-      if (pid > 0) {
-        mpc.ReadFromFile(g0, ifs, 3, m0); // g
-        mpc.ReadFromFile(miss0, ifs, m0); // miss
-
-        mpc.SwitchSeed(10);
-        mpc.RandMat(g0_mask, 3, m0);
-        mpc.RandVec(miss0_mask, m0);
-        mpc.RestoreSeed();
-      } else {
-        Init(g0, 3, m0);
-        Init(g0_mask, 3, m0);
-        Init(miss0, m0);
-        Init(miss0_mask, m0);
-
-        for (int p = 1; p <= 2; p++) {
-          mpc.SwitchSeed(10 + p);
-          mpc.RandMat(tmp_mat, 3, m0);
-          mpc.RandVec(tmp_vec, m0);
-          mpc.RestoreSeed();
-
-          g0_mask += tmp_mat;
-          miss0_mask += tmp_vec;
-        }
-      }
-      
-      Mat<ZZ_p> g, g_mask;
-      Vec<ZZ_p> miss, miss_mask;
-      g.SetDims(3, m2);
-      miss.SetLength(m2);
-      g_mask.SetDims(3, m2);
-      miss_mask.SetLength(m2);
-      int ind2 = 0;
-      for (int j = 0; j < m0; j++) {
-        if (gkeep3[j]) {
-          for (int k = 0; k < 3; k++) {
-            g[k][ind2] = g0[k][j];
-            g_mask[k][ind2] = g0_mask[k][j];
+        
+        Mat<ZZ_p> g, g_mask;
+        Vec<ZZ_p> miss, miss_mask;
+        g.SetDims(3, m2);
+        miss.SetLength(m2);
+        g_mask.SetDims(3, m2);
+        miss_mask.SetLength(m2);
+        int ind2 = 0;
+        for (int j = 0; j < m0; j++) {
+          if (gkeep3[j]) {
+            for (int k = 0; k < 3; k++) {
+              g[k][ind2] = g0[k][j];
+              g_mask[k][ind2] = g0_mask[k][j];
+            }
+            miss[ind2] = miss0[j];
+            miss_mask[ind2] = miss0_mask[j];
+            ind2++;
           }
-          miss[ind2] = miss0[j];
-          miss_mask[ind2] = miss0_mask[j];
-          ind2++;
+        }
+
+        dosage[cur % bsize] = g[1] + 2 * g[2];
+        dosage_mask[cur % bsize] = g_mask[1] + 2 * g_mask[2];
+
+        u_vec[cur % bsize] = u[cur];
+        u_mask_vec[cur % bsize] = u_mask[cur];
+        p_hat_vec[cur % bsize] = p_hat[cur];
+        p_hat_mask_vec[cur % bsize] = p_hat_mask[cur];
+
+        V_sub[cur % bsize] = V[cur];
+        V_mask_sub[cur % bsize] = V_mask[cur];
+
+        if (cur % bsize == bsize - 1) {
+          mpc.ProfilerPopState(false); // file_io/rng
+
+          mpc.BeaverMult(sx, u_vec, u_mask_vec, dosage, dosage_mask);
+          mpc.BeaverMult(sxp, p_hat_vec, p_hat_mask_vec, dosage, dosage_mask);
+
+          Mat<ZZ_p> sxx_tmp;
+          Init(sxx_tmp, bsize, m2);
+          mpc.BeaverMultElem(sxx_tmp, dosage, dosage_mask, dosage, dosage_mask);
+          for (int b = 0; b < bsize; b++) {
+            sxx += sxx_tmp[b];
+          }
+          sxx_tmp.kill();
+
+          mpc.Transpose(V_sub); // (k + NUM_COVS)-by-bsize
+          transpose(V_mask_sub, V_mask_sub);
+
+          mpc.BeaverMult(B, V_sub, V_mask_sub, dosage, dosage_mask);
+
+          cout << "\t" << cur+1 << " / " << n1 << ", "; toc(); tic();
+
+          Init(dosage, bsize, m2);
+          Init(dosage_mask, bsize, m2);
+          Init(V_sub, bsize, k + Param::NUM_COVS);
+          Init(V_mask_sub, bsize, k + Param::NUM_COVS);
+
+          mpc.ProfilerPushState("file_io/rng");
         }
       }
-
-      dosage[cur % bsize] = g[1] + 2 * g[2];
-      dosage_mask[cur % bsize] = g_mask[1] + 2 * g_mask[2];
-
-      u_vec[cur % bsize] = u[cur];
-      u_mask_vec[cur % bsize] = u_mask[cur];
-      p_hat_vec[cur % bsize] = p_hat[cur];
-      p_hat_mask_vec[cur % bsize] = p_hat_mask[cur];
-
-      V_sub[cur % bsize] = V[cur];
-      V_mask_sub[cur % bsize] = V_mask[cur];
-
-      if (cur % bsize == bsize - 1) {
-        mpc.ProfilerPopState(false); // file_io/rng
-
-        mpc.BeaverMult(sx, u_vec, u_mask_vec, dosage, dosage_mask);
-        mpc.BeaverMult(sxp, p_hat_vec, p_hat_mask_vec, dosage, dosage_mask);
-
-        Mat<ZZ_p> sxx_tmp;
-        Init(sxx_tmp, bsize, m2);
-        mpc.BeaverMultElem(sxx_tmp, dosage, dosage_mask, dosage, dosage_mask);
-        for (int b = 0; b < bsize; b++) {
-          sxx += sxx_tmp[b];
-        }
-        sxx_tmp.kill();
-
-        mpc.Transpose(V_sub); // (k + NUM_COVS)-by-bsize
-        transpose(V_mask_sub, V_mask_sub);
-
-        mpc.BeaverMult(B, V_sub, V_mask_sub, dosage, dosage_mask);
-
-        cout << "\t" << cur+1 << " / " << n1 << ", "; toc(); tic();
-
-        Init(dosage, bsize, m2);
-        Init(dosage_mask, bsize, m2);
-        Init(V_sub, bsize, k + Param::NUM_COVS);
-        Init(V_mask_sub, bsize, k + Param::NUM_COVS);
-
-        mpc.ProfilerPushState("file_io/rng");
-      }
+      rolling_n1 += sub_n1;
+      ifs.close();
     }
-    ifs.close();
     mpc.ProfilerPopState(false); // file_io/rng
 
     long remainder = n1 % bsize;
