@@ -999,6 +999,22 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   cout << "n1: " << n1 << ", " << "m1: " << m1 << endl;
 
+  // Now calculate the "sub" n1 values for each dataset - ie number of individuals kept after filtering for each dataset
+  vector<long> n1_vec;
+  rolling_n0 = 0;
+  for (int i = 0; i < Param::NUM_INDS.size(); i++) {
+    n1_vec.push_back(0);
+    sub_n0 = Param::NUM_INDS[i];
+    for (int j = 0; j < sub_n0; j++) {
+      if (ikeep[rolling_n0 + j] == 1) {
+        n1_vec[i] = n1_vec[i] + 1;
+      }
+    }
+    rolling_n0 += sub_n0;
+  }
+  long rolling_n1;
+  long sub_n1;
+
   cout << "Filtering phenotypes and covariates" << endl;
   mpc.Filter(pheno, ikeep, n1);
   mpc.FilterRows(cov, ikeep, n1);
@@ -1058,6 +1074,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     long report_bsize = n1 / 10;
     ind = -1;
+    rolling_n1 = 0;
     tic();
 
     // Loop over all datasets to calculate genotype statistics over all individuals
@@ -1072,11 +1089,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       }
 
       // Iterate over this dataset, considering only those individuals who have not been filtered out
-      // TODO: here on out isn't done yet. For this part, a bit tricky - before, we looped over sub_n0
-      // and updated reads of i with i + rolling_n0. Now, we need to do the same but with sub_n1 and 
-      // rolling_n1 - i.e., for each dataset, we need the number of "keep" individuals sub_n1
-      // will have to calculate that above, where n1 is calculated
-      for (int i = 0; i < n1; i++) {
+      sub_n1 = n1_vec[dataset_idx];
+      for (int i = rolling_n1; i < rolling_n1 + sub_n1; i++) {
         ind++;
 
         mpc.ProfilerPushState("file_io/rng");
@@ -1190,6 +1204,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           cout << "\t" << i+1 << " / " << n1 << ", "; toc(); tic();
         }
       }
+      rolling_n1 += sub_n1;
 
       ifs.close();
     }
@@ -1298,6 +1313,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   Vec<ZZ_p> gkeep2;
   Init(gkeep2, m1);
+
+  // TODO: Done updating until here
 
   if (Param::SKIP_QC) {
     for (int i = 0; i < m1; i++) {
