@@ -1205,7 +1205,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         }
       }
       rolling_n1 += sub_n1;
-
       ifs.close();
     }
 
@@ -1313,8 +1312,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   Vec<ZZ_p> gkeep2;
   Init(gkeep2, m1);
-
-  // TODO: Done updating until here
 
   if (Param::SKIP_QC) {
     for (int i = 0; i < m1; i++) {
@@ -1561,15 +1558,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       }
     }
 
-    ifs.open(cache(pid, "input_geno").c_str(), ios::binary);
-    if (pid > 0) {
-      mpc.ImportSeed(10, ifs);
-    } else {
-      for (int p = 1; p <= 2; p++) {
-        mpc.ImportSeed(10 + p, ifs);
-      }
-    }
-
     long bsize = n1 / 10;
 
     cout << "Caching input data for PCA:" << endl;
@@ -1577,95 +1565,111 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     fs.open(cache(pid, "pca_input").c_str(), ios::out | ios::binary);
 
     ind = -1;
+    rolling_n1 = 0;
     tic();
-    for (int i = 0; i < n1; i++) {
-      ind++;
 
-      mpc.ProfilerPushState("file_io/rng");
+    // Loop over all datasets
+    for (int dataset_idx = 0; dataset_idx < Param::NUM_INDS.size(); dataset_idx++) {
+      ifs.open(cache(pid, dataset_idx, "input_geno").c_str(), ios::binary);
+      if (pid > 0) {
+        mpc.ImportSeed(10, ifs);
+      } else {
+        for (int p = 1; p <= 2; p++) {
+          mpc.ImportSeed(10 + p, ifs);
+        }
+      }
 
-      Mat<ZZ_p> g0, g0_mask;
-      Vec<ZZ_p> miss0, miss0_mask;
+      sub_n1 = n1_vec[dataset_idx];
+      for (int i = rolling_n1; i < rolling_n1 + sub_n1; i++) {
+        ind++;
 
-      while (ikeep[ind] != 1) {
+        mpc.ProfilerPushState("file_io/rng");
+
+        Mat<ZZ_p> g0, g0_mask;
+        Vec<ZZ_p> miss0, miss0_mask;
+
+        while (ikeep[ind] != 1) {
+          if (pid > 0) {
+            mpc.SkipData(ifs, 3, m0); // g
+            mpc.SkipData(ifs, m0); // miss
+
+            mpc.SwitchSeed(10);
+            mpc.RandMat(g0_mask, 3, m0);
+            mpc.RandVec(miss0_mask, m0);
+            mpc.RestoreSeed();
+          } else {
+            for (int p = 1; p <= 2; p++) {
+              mpc.SwitchSeed(10 + p);
+              mpc.RandMat(g0_mask, 3, m0);
+              mpc.RandVec(miss0_mask, m0);
+              mpc.RestoreSeed();
+            }
+          }
+          ind++;
+        }
+
         if (pid > 0) {
-          mpc.SkipData(ifs, 3, m0); // g
-          mpc.SkipData(ifs, m0); // miss
+          mpc.ReadFromFile(g0, ifs, 3, m0); // g
+          mpc.ReadFromFile(miss0, ifs, m0); // miss
 
           mpc.SwitchSeed(10);
           mpc.RandMat(g0_mask, 3, m0);
           mpc.RandVec(miss0_mask, m0);
           mpc.RestoreSeed();
         } else {
+          Init(g0, 3, m0);
+          Init(g0_mask, 3, m0);
+          Init(miss0, m0);
+          Init(miss0_mask, m0);
+
           for (int p = 1; p <= 2; p++) {
             mpc.SwitchSeed(10 + p);
-            mpc.RandMat(g0_mask, 3, m0);
-            mpc.RandVec(miss0_mask, m0);
+            mpc.RandMat(tmp_mat, 3, m0);
+            mpc.RandVec(tmp_vec, m0);
             mpc.RestoreSeed();
+
+            g0_mask += tmp_mat;
+            miss0_mask += tmp_vec;
           }
         }
-        ind++;
-      }
+        
+        mpc.ProfilerPopState(false); // file_io/rng
 
-      if (pid > 0) {
-        mpc.ReadFromFile(g0, ifs, 3, m0); // g
-        mpc.ReadFromFile(miss0, ifs, m0); // miss
-
-        mpc.SwitchSeed(10);
-        mpc.RandMat(g0_mask, 3, m0);
-        mpc.RandVec(miss0_mask, m0);
-        mpc.RestoreSeed();
-      } else {
-        Init(g0, 3, m0);
-        Init(g0_mask, 3, m0);
-        Init(miss0, m0);
-        Init(miss0_mask, m0);
-
-        for (int p = 1; p <= 2; p++) {
-          mpc.SwitchSeed(10 + p);
-          mpc.RandMat(tmp_mat, 3, m0);
-          mpc.RandVec(tmp_vec, m0);
-          mpc.RestoreSeed();
-
-          g0_mask += tmp_mat;
-          miss0_mask += tmp_vec;
-        }
-      }
-      
-      mpc.ProfilerPopState(false); // file_io/rng
-
-      // Filter out loci that failed missing rate filter
-      Mat<ZZ_p> g, g_mask;
-      Vec<ZZ_p> miss, miss_mask;
-      g.SetDims(3, m3);
-      g_mask.SetDims(3, m3);
-      miss.SetLength(m3);
-      miss_mask.SetLength(m3);
-      int ind2 = 0;
-      for (int j = 0; j < m0; j++) {
-        if (gkeep3[j]) {
-          for (int k = 0; k < 3; k++) {
-            g[k][ind2] = g0[k][j];
-            g_mask[k][ind2] = g0_mask[k][j];
+        // Filter out loci that failed missing rate filter
+        Mat<ZZ_p> g, g_mask;
+        Vec<ZZ_p> miss, miss_mask;
+        g.SetDims(3, m3);
+        g_mask.SetDims(3, m3);
+        miss.SetLength(m3);
+        miss_mask.SetLength(m3);
+        int ind2 = 0;
+        for (int j = 0; j < m0; j++) {
+          if (gkeep3[j]) {
+            for (int k = 0; k < 3; k++) {
+              g[k][ind2] = g0[k][j];
+              g_mask[k][ind2] = g0_mask[k][j];
+            }
+            miss[ind2] = miss0[j];
+            miss_mask[ind2] = miss0_mask[j];
+            ind2++;
           }
-          miss[ind2] = miss0[j];
-          miss_mask[ind2] = miss0_mask[j];
-          ind2++;
+        }
+
+        Vec<ZZ_p> dosage, dosage_mask;
+        dosage = g[1] + 2 * g[2];
+        dosage_mask = g_mask[1] + 2 * g_mask[2];
+
+        mpc.BeaverWriteToFile(dosage, dosage_mask, fs);
+        mpc.BeaverWriteToFile(miss, miss_mask, fs);
+
+        if ((i + 1) % bsize == 0 || i == n1 - 1) {
+          cout << "\t" << i+1 << " / " << n1 << ", "; toc(); tic();
         }
       }
-
-      Vec<ZZ_p> dosage, dosage_mask;
-      dosage = g[1] + 2 * g[2];
-      dosage_mask = g_mask[1] + 2 * g_mask[2];
-
-      mpc.BeaverWriteToFile(dosage, dosage_mask, fs);
-      mpc.BeaverWriteToFile(miss, miss_mask, fs);
-
-      if ((i + 1) % bsize == 0 || i == n1 - 1) {
-        cout << "\t" << i+1 << " / " << n1 << ", "; toc(); tic();
-      }
+      rolling_n1 += sub_n1;
+      ifs.close();
     }
 
-    ifs.close();
     fs.close();
   }
 
