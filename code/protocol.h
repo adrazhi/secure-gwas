@@ -632,14 +632,14 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     Vec<ZZ_p> sub_pheno;
     Init(sub_pheno, sub_n0);
     mpc.ReadFromFile(sub_pheno, ifs, sub_n0);
-    for (int j = 0; j < sub_pheno.size(); j++) {
+    for (int j = 0; j < sub_n0; j++) {
       pheno[rolling_n0 + j] = sub_pheno[j];
     }
 
     Mat<ZZ_p> sub_cov;
     Init(sub_cov, sub_n0, Param::NUM_COVS);
     mpc.ReadFromFile(sub_cov, ifs, sub_n0, Param::NUM_COVS);
-    for (int j = 0; j < sub_cov.size(); j++) {
+    for (int j = 0; j < sub_n0; j++) {
       cov[rolling_n0 + j] = sub_cov[j];
     }
 
@@ -2308,7 +2308,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       }
 
       sub_n1 = n1_vec[dataset_idx];
-      for (int cur = rolling_n1; i < rolling_n1 + sub_n1; i++) {
+      for (int cur = rolling_n1; cur < rolling_n1 + sub_n1; cur++) {
         ind++;
 
         Mat<ZZ_p> g0, g0_mask;
