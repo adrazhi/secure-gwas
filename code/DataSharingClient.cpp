@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
   }
 
   string round_str(argv[3]);
-  Param::Convert(round_str, Param::CUR_ROUND, 'CUR_ROUND')
+  Param::Convert(round_str, Param::CUR_ROUND, "CUR_ROUND")
   
   if (!Param::ParseFile(argv[2])) {
     cout << "Could not finish parsing parameter file" << endl;
