@@ -174,8 +174,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  cout << "Port P0_P1 for instance " << pid << " for round " <<  round_str << " is " << Param::PORT_P0_P1 << endl;
-
   string data_dir;
   if (pid == 3) {
     if (argc < 5) {
