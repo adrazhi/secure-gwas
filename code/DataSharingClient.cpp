@@ -154,8 +154,8 @@ bool send_stream(string data_dir, MPCEnv& mpc, int mode) {
 }
 
 int main(int argc, char** argv) {
-  if (argc < 3) {
-    cout << "Usage: DataSharingClient party_id param_file [data_dir (for P3/SP)]" << endl;
+  if (argc < 4) {
+    cout << "Usage: DataSharingClient party_id param_file round_number [data_dir (for P3/SP)]" << endl;
     return 1;
   }
 
@@ -166,19 +166,24 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  string round_str(argv[3]);
+  Param::Convert(round_str, Param::CUR_ROUND, 'CUR_ROUND')
+  
   if (!Param::ParseFile(argv[2])) {
     cout << "Could not finish parsing parameter file" << endl;
     return 1;
   }
 
+  cout << "Port P0_P1 for instance " << pid << " for round " <<  round_str << " is " << Param::PORT_P0_P1 << endl;
+
   string data_dir;
   if (pid == 3) {
-    if (argc < 4) {
+    if (argc < 5) {
       cout << "Error: for P3/SP, data directory should be provided as the last argument" << endl;
       return 1;
     }
 
-    data_dir = argv[3];
+    data_dir = argv[4];
     if (data_dir[data_dir.size() - 1] != '/') {
       data_dir += "/";
     }

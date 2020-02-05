@@ -27,6 +27,9 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  // reset the current round
+  Param::CUR_ROUND = 0;
+
   if (!Param::ParseFile(argv[2])) {
     cout << "Could not finish parsing parameter file" << endl;
     return 1;

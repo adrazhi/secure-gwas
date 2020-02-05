@@ -89,6 +89,8 @@ class Param {
     static bool Convert(string s, T &var, string name);
     template<class T>
     static bool ConvertVector(string s, vector<T> &var, string name);
+    template<class T>
+    static bool ConvertPort(string s, T &var, string name);
     static bool ParseFile(const char *param_file);
 };
 

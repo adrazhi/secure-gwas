@@ -24,6 +24,22 @@ bool Param::ConvertVector(string s, vector<T> &var, string name) {
   return true;
 }
 
+template<class T>
+bool Param::ConvertPort(string s, T &var, string name) {
+  istringstream iss(s);
+  T elem;
+  int count = 0;
+  while (iss.tellg() != -1) {
+    iss >> std::skipws >> elem;
+    if (count == Param::CUR_ROUND) {
+      var = elem;
+      break;
+    }
+    count++;
+  }
+  return true;
+}
+
 bool Param::ParseFile(const char *param_file) {
   ifstream pfile(param_file);
   if (!pfile.is_open()) {
@@ -44,15 +60,15 @@ bool Param::ParseFile(const char *param_file) {
 
     bool ret;
     if (k == "PORT_P0_P1") {
-      ret = Convert(v, Param::PORT_P0_P1, k);
+      ret = ConvertPort(v, Param::PORT_P0_P1, k);
     } else if (k == "PORT_P0_P2") {
-      ret = Convert(v, Param::PORT_P0_P2, k);
+      ret = ConvertPort(v, Param::PORT_P0_P2, k);
     } else if (k == "PORT_P1_P2") {
-      ret = Convert(v, Param::PORT_P1_P2, k);
+      ret = ConvertPort(v, Param::PORT_P1_P2, k);
     } else if (k == "PORT_P1_P3") {
-      ret = Convert(v, Param::PORT_P1_P3, k);
+      ret = ConvertPort(v, Param::PORT_P1_P3, k);
     } else if (k == "PORT_P2_P3") {
-      ret = Convert(v, Param::PORT_P2_P3, k);
+      ret = ConvertPort(v, Param::PORT_P2_P3, k);
     } else if (k == "IP_ADDR_P0") {
       ret = Convert(v, Param::IP_ADDR_P0, k);
     } else if (k == "IP_ADDR_P1") {
@@ -124,8 +140,6 @@ bool Param::ParseFile(const char *param_file) {
       ret = Convert(v, Param::NUM_COVS, k);
     } else if (k == "DEBUG") {
       ret = Convert(v, Param::DEBUG, k);
-    } else if (k == "CUR_ROUND") {
-      ret = Convert(v, Param::CUR_ROUND, k);
     } else {
       cout << "Unknown parameter: " << k << endl;
       ret = false;
