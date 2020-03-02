@@ -30,9 +30,16 @@ int main(int argc, char** argv) {
   MPCEnv::RandVec(b, n);
   struct timeval start, end;
 
+  vector< pair<int, int> > pairs;
+  MPCEnv mpc;
+  if (!mpc.Initialize(0, pairs)) {
+    cout << "MPC environment initialization failed" << endl;
+    return 1;
+  }
+
   gettimeofday(&start, NULL); 
   ios_base::sync_with_stdio(false); 
-  MPCEnv::FPDiv(c1, a, b);
+  mpc.FPDiv(c1, a, b);
   gettimeofday(&end, NULL); 
 
   double runtime;
@@ -43,7 +50,7 @@ int main(int argc, char** argv) {
 
   gettimeofday(&start, NULL); 
   ios_base::sync_with_stdio(false); 
-  MPCEnv::FPDivParallel(c2, a, b);
+  mpc.FPDivParallel(c2, a, b);
   gettimeofday(&end, NULL); 
 
   runtime = (end.tv_sec - start.tv_sec) * 1e6;
