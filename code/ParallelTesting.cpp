@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   double runtime;
   runtime = (end.tv_sec - start.tv_sec) * 1e6;
   runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-  cout << "Runtime (serial): " << fixed << time_taken << setprecision(6); 
+  cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
   cout << " sec" << endl;
 
   gettimeofday(&start, NULL); 
@@ -55,6 +55,6 @@ int main(int argc, char** argv) {
 
   runtime = (end.tv_sec - start.tv_sec) * 1e6;
   runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-  cout << "Runtime (parallel): " << fixed << time_taken << setprecision(6); 
+  cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
   cout << " sec" << endl; 
 }
