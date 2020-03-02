@@ -74,6 +74,8 @@ public:
 
   // Assumes b is strictly positive
   void FPDiv(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b);
+  void FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b);
+  // void FPDivBase(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b);
 
   // k is the bit-length of the underlying data range
   // m is the number of bits to truncate

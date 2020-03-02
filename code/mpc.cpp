@@ -1632,6 +1632,39 @@ void MPCEnv::FPDiv(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   Trunc(c);
 }
 
+void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
+  assert(a.length() == b.length());
+
+  int n = a.length();
+  int nbatch = Param::NUM_THREADS;
+  cout << "FPDiv with number of threads: " << nbatch << endl;
+  int batch_size = ceil(n / ((double) nbatch));
+  c.SetLength(n);
+
+  #pragma omp parallel for
+  for (int i = 0; i < nbatch; i++) {
+    int start = batch_size * i;
+    int end = start + batch_size;
+    if (end > n) {
+      end = n;
+    }
+    int chunk_size = end - start;
+
+    Vec<ZZ_p> a_copy, b_copy;
+    a_copy.SetLength(chunk_size);
+    b_copy.SetLength(chunk_size);
+    for (int j = 0; j < chunk_size; j++) {
+      a_copy[j] = a[start + j];
+      b_copy[j] = b[start + j];
+    }
+    Vec<ZZ_p> c_copy;
+    FPDiv(c_copy, a_copy, b_copy);
+    for (int j = 0; j < chunk_size; j++) {
+      c[start + j] = c_copy[j];
+    }
+  }
+}
+
 void MPCEnv::Trunc(Mat<ZZ_p>& a, int k, int m) {
   if (debug) cout << "Trunc: " << a.NumRows() << ", " << a.NumCols() << endl; 
 
