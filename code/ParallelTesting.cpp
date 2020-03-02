@@ -25,11 +25,6 @@ int main(int argc, char** argv) {
   int n = 100000;
   Param::NUM_THREADS = 10;
 
-  Vec<ZZ_p> a, b, c1, c2;
-  MPCEnv::RandVec(a, n);
-  MPCEnv::RandVec(b, n);
-  struct timeval start, end;
-
   vector< pair<int, int> > pairs;
   MPCEnv mpc;
   if (!mpc.Initialize(0, pairs)) {
@@ -37,12 +32,17 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  Vec<ZZ_p> a, b, c1, c2;
+  mpc.RandVec(a, n);
+  mpc.RandVec(b, n);
+  struct timeval start, end;
+  double runtime;
+
   gettimeofday(&start, NULL); 
   ios_base::sync_with_stdio(false); 
   mpc.FPDiv(c1, a, b);
   gettimeofday(&end, NULL); 
 
-  double runtime;
   runtime = (end.tv_sec - start.tv_sec) * 1e6;
   runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
   cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
