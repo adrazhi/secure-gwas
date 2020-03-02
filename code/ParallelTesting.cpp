@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  int n = 100000;
+  int n = 1;
   Param::NUM_THREADS = 10;
 
   vector< pair<int, int> > pairs;
@@ -34,9 +34,9 @@ int main(int argc, char** argv) {
 
   Vec<ZZ_p> a, b, c1, c2;
   mpc.RandVec(a, n);
-  cout << "test 1: " << a[0] << endl;
+  cout << "Vector 1: " << a[0] << endl;
   mpc.RandVec(b, n);
-  cout << "test 2: " << b[0] << endl;
+  cout << "Vector 2: " << b[0] << endl;
   struct timeval start, end;
   double runtime;
 
