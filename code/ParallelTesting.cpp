@@ -43,8 +43,10 @@ int main(int argc, char** argv) {
   // double runtime;
 
   // gettimeofday(&start, NULL); 
-  // ios_base::sync_with_stdio(false); 
+  // ios_base::sync_with_stdio(false);
+  mpc.ProfilerPushState("div"); 
   mpc.FPDiv(c1, a, b);
+  mpc.ProfilerPopState(false); // div
   // gettimeofday(&end, NULL); 
 
   cout << "Division: " << c1[0] << endl;
