@@ -17,7 +17,14 @@ using namespace NTL;
 using namespace std;
 
 int main(int argc, char** argv) {
-  if (!Param::ParseFile(argv[1])) {
+  string pid_str(argv[1]);
+  int pid;
+  if (!Param::Convert(pid_str, pid, "party_id") || pid < 0 || pid > 2) {
+    cout << "Error: party_id should be 0, 1, or 2" << endl;
+    return 1;
+  }
+
+  if (!Param::ParseFile(argv[2])) {
     cout << "Could not finish parsing parameter file" << endl;
     return 1;
   }
@@ -26,14 +33,17 @@ int main(int argc, char** argv) {
   Param::NUM_THREADS = 10;
 
   vector< pair<int, int> > pairs;
+  pairs.push_back(make_pair(0, 1));
+  pairs.push_back(make_pair(0, 2));
+  pairs.push_back(make_pair(1, 2));
   MPCEnv mpc;
-  if (!mpc.Initialize(0, pairs)) {
+  if (!mpc.Initialize(pid, pairs)) {
     cout << "MPC environment initialization failed" << endl;
     return 1;
   }
 
   Vec<ZZ_p> a, b, c1, c2;
-  mpc.SwitchSeed(1);
+  mpc.SwitchSeed(0);
   mpc.RandVec(a, n);
   cout << "Vector 1: " << a[0] << endl;
   mpc.RandVec(b, n);
@@ -65,4 +75,6 @@ int main(int argc, char** argv) {
   // runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
   // cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
   // cout << " sec" << endl; 
+
+  mpc.CleanUp();
 }
