@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  int n = 1;
+  int n = 100;
   Param::NUM_THREADS = 10;
 
   vector< pair<int, int> > pairs;
@@ -49,32 +49,32 @@ int main(int argc, char** argv) {
   mpc.RandVec(b, n);
   cout << "Vector 2: " << b[0] << endl;
   mpc.RestoreSeed();
-  // struct timeval start, end;
-  // double runtime;
+  struct timeval start, end;
+  double runtime;
 
-  // gettimeofday(&start, NULL); 
-  // ios_base::sync_with_stdio(false);
+  gettimeofday(&start, NULL); 
+  ios_base::sync_with_stdio(false);
   mpc.ProfilerPushState("div"); 
   mpc.FPDiv(c1, a, b);
   mpc.ProfilerPopState(false); // div
-  // gettimeofday(&end, NULL); 
+  gettimeofday(&end, NULL); 
 
   cout << "Division: " << c1[0] << endl;
 
-  // runtime = (end.tv_sec - start.tv_sec) * 1e6;
-  // runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-  // cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
-  // cout << " sec" << endl;
+  runtime = (end.tv_sec - start.tv_sec) * 1e6;
+  runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+  cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
+  cout << " sec" << endl;
 
-  // gettimeofday(&start, NULL); 
-  // ios_base::sync_with_stdio(false); 
-  // mpc.FPDivParallel(c2, a, b);
-  // gettimeofday(&end, NULL); 
+  gettimeofday(&start, NULL); 
+  ios_base::sync_with_stdio(false); 
+  mpc.FPDivParallel(c2, a, b);
+  gettimeofday(&end, NULL); 
 
-  // runtime = (end.tv_sec - start.tv_sec) * 1e6;
-  // runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-  // cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
-  // cout << " sec" << endl; 
+  runtime = (end.tv_sec - start.tv_sec) * 1e6;
+  runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+  cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
+  cout << " sec" << endl; 
 
   mpc.CleanUp();
 }
