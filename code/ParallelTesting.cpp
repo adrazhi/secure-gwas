@@ -11,6 +11,7 @@
 #include <fstream>
 #include <map>
 #include <iostream>
+#include <string>
 #include <sstream>
 
 using namespace NTL;
@@ -29,7 +30,9 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  int n = 100;
+  string n_str(argv[3]);
+  int n = stoi(n_str);
+  cout << "Number of elements in array: " << n << endl;
   Param::NUM_THREADS = 10;
 
   vector< pair<int, int> > pairs;
