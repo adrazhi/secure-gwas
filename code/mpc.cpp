@@ -1650,6 +1650,9 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
     }
     int chunk_size = end - start;
 
+    int threadnum = omp_get_thread_num();
+    cout << "Iter " << i << " , Thread " << threadnum << endl;
+
     Vec<ZZ_p> a_copy, b_copy;
     a_copy.SetLength(chunk_size);
     b_copy.SetLength(chunk_size);

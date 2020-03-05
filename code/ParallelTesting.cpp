@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
   mpc.ProfilerPopState(false); // div
   gettimeofday(&end, NULL); 
 
-  cout << "Division: " << c1[0] << endl;
+  cout << "Division 1: " << c1[0] << endl;
 
   runtime = (end.tv_sec - start.tv_sec) * 1e6;
   runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
@@ -73,6 +73,8 @@ int main(int argc, char** argv) {
   ios_base::sync_with_stdio(false); 
   mpc.FPDivParallel(c2, a, b);
   gettimeofday(&end, NULL); 
+
+  cout << "Division 2: " << c2[0] << endl;
 
   runtime = (end.tv_sec - start.tv_sec) * 1e6;
   runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
