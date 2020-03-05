@@ -13,6 +13,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <omp.h>
 
 using namespace NTL;
 using namespace std;
