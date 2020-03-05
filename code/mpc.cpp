@@ -1660,8 +1660,8 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
     cout << "Iter " << i << " , Thread " << threadnum << endl;
 
     // Vec<Vec<ZZ_p>> a_copy, b_copy;
-    // a_copy.SetLength(chunk_size);
-    // b_copy.SetLength(chunk_size);
+    a_copy[i].SetLength(chunk_size);
+    b_copy[i].SetLength(chunk_size);
     for (int j = 0; j < chunk_size; j++) {
       a_copy[i][j] = a[start + j];
       b_copy[i][j] = b[start + j];
