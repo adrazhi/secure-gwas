@@ -1382,7 +1382,7 @@ public:
 
 
 private:
-  map<int, CSocket> sockets;
+  map<int, map<int, CSocket>> sockets;
   map<int, RandomStream> prg;
 
   /* Table lookup cache */

@@ -174,6 +174,9 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  // Data Sharing Code should not be multi-threaded
+  Param::NUM_THREADS = 1;
+
   string data_dir;
   if (pid == 3) {
     if (argc < 5) {

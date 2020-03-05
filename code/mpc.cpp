@@ -207,50 +207,59 @@ bool MPCEnv::SetupChannels(vector< pair<int, int> > &pairs) {
       continue;
     }
 
-    int port = 8000;
-    if (p1 == 0 && p2 == 1) {
-      port = Param::PORT_P0_P1;
-    } else if (p1 == 0 && p2 == 2) {
-      port = Param::PORT_P0_P2;
-    } else if (p1 == 1 && p2 == 2) {
-      port = Param::PORT_P1_P2;
-    } else if (p1 == 1 && p2 == 3) {
-      port = Param::PORT_P1_P3;
-    } else if (p1 == 2 && p2 == 3) {
-      port = Param::PORT_P2_P3;
-    }
+    // for parallelization, create one socket for each pair of threads, rather than one socket for each pair of machines
+    for (int thread = 0; thread < Param::NUM_THREADS; thread++) {
+      int port = 8000;
+      if (p1 == 0 && p2 == 1) {
+        port = Param::PORT_P0_P1;
+      } else if (p1 == 0 && p2 == 2) {
+        port = Param::PORT_P0_P2;
+      } else if (p1 == 1 && p2 == 2) {
+        port = Param::PORT_P1_P2;
+      } else if (p1 == 1 && p2 == 3) {
+        port = Param::PORT_P1_P3;
+      } else if (p1 == 2 && p2 == 3) {
+        port = Param::PORT_P2_P3;
+      }
 
-    ostringstream oss;
-    oss << Param::KEY_PATH << "P" << p1 << "_P" << p2 << ".key";
-    string key_file = oss.str();
+      // this ensures that the ports for 2 different pairs of threads on the same 2 machines do not overlap
+      port = port + + 2 * thread;
 
-    int pother = p1 + p2 - pid;
-    sockets.insert(map<int, CSocket>::value_type(pother, CSocket()));
+      ostringstream oss;
+      oss << Param::KEY_PATH << "P" << p1 << "_P" << p2 << ".key";
+      string key_file = oss.str();
 
-    if (p1 == pid) {
-      if (!OpenChannel(sockets[pother], port)) {
-        cout << "Failed to connect with P" << pother << endl;
+      int pother = p1 + p2 - pid;
+      if (thread == 0) {
+        sockets.insert(make_pair(pother, map<int, CSocket>()));
+      }
+      sockets.find(pother)->second.insert(map<int, CSocket>::value_type(thread, CSocket()));
+
+      if (p1 == pid) {
+        if (!OpenChannel(sockets[pother][thread], port)) {
+          cout << "Failed to connect with P" << pother << " on thread " << thread << endl;
+          return false;
+        }
+      } else {
+        string ip_addr;
+        if (pother == 0) {
+          ip_addr = Param::IP_ADDR_P0;
+        } else if (pother == 1) {
+          ip_addr = Param::IP_ADDR_P1;
+        } else if (pother == 2) {
+          ip_addr = Param::IP_ADDR_P2;
+        }
+
+        if (!Connect(sockets[pother][thread], ip_addr.c_str(), port)) {
+          cout << "Failed to connect with P" << pother << " on thread " << thread << endl;
+          return false;
+        }
+      }
+
+      if (!sockets[pother][thread].SetKey(key_file)) {
+        cout << "Failed to establish a secure channel with P" << pother << endl;
         return false;
       }
-    } else {
-      string ip_addr;
-      if (pother == 0) {
-        ip_addr = Param::IP_ADDR_P0;
-      } else if (pother == 1) {
-        ip_addr = Param::IP_ADDR_P1;
-      } else if (pother == 2) {
-        ip_addr = Param::IP_ADDR_P2;
-      }
-
-      if (!Connect(sockets[pother], ip_addr.c_str(), port)) {
-        cout << "Failed to connect with P" << pother << endl;
-        return false;
-      }
-    }
-
-    if (!sockets[pother].SetKey(key_file)) {
-      cout << "Failed to establish a secure channel with P" << pother << endl;
-      return false;
     }
 
     cout << "Established a secure channel with P" << pother << endl;
@@ -1657,7 +1666,7 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
     // avoid error by re-setting the modulus
     ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
     ZZ_p::init(base_p);
-    
+
     Vec<ZZ_p> a_copy, b_copy;
     a_copy.SetLength(chunk_size);
     b_copy.SetLength(chunk_size);
