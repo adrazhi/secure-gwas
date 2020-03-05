@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <omp.h>
 
 using namespace NTL;
 using namespace std;
@@ -1641,7 +1642,7 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   int batch_size = ceil(n / ((double) nbatch));
   c.SetLength(n);
 
-  #pragma omp parallel num_threads(nbatch) for
+  #pragma omp parallel for num_threads(nbatch)
   for (int i = 0; i < nbatch; i++) {
     int start = batch_size * i;
     int end = start + batch_size;
