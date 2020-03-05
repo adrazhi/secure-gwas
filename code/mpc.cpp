@@ -1642,11 +1642,6 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   int batch_size = ceil(n / ((double) nbatch));
   c.SetLength(n);
 
-  Vec<Vec<ZZ_p>> a_copy, b_copy, c_copy;
-  a_copy.SetLength(nbatch);
-  b_copy.SetLength(nbatch);
-  c_copy.SetLength(nbatch);
-
   #pragma omp parallel for num_threads(nbatch)
   for (int i = 0; i < nbatch; i++) {
     int start = batch_size * i;
@@ -1659,17 +1654,17 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
     int threadnum = omp_get_thread_num();
     cout << "Iter " << i << " , Thread " << threadnum << endl;
 
-    // Vec<Vec<ZZ_p>> a_copy, b_copy;
-    a_copy[i].SetLength(chunk_size);
-    b_copy[i].SetLength(chunk_size);
+    Vec<ZZ_p> a_copy, b_copy;
+    a_copy.SetLength(chunk_size);
+    b_copy.SetLength(chunk_size);
     for (int j = 0; j < chunk_size; j++) {
-      a_copy[i][j] = a[start + j];
-      b_copy[i][j] = b[start + j];
+      a_copy[j] = a[start + j];
+      b_copy[j] = b[start + j];
     }
-    // Vec<ZZ_p> c_copy;
-    FPDiv(c_copy[i], a_copy[i], b_copy[i]);
+    Vec<ZZ_p> c_copy;
+    FPDiv(c_copy, a_copy, b_copy);
     for (int j = 0; j < chunk_size; j++) {
-      c[start + j] = c_copy[i][j];
+      c[start + j] = c_copy[j];
     }
   }
 }
