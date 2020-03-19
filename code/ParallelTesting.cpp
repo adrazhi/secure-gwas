@@ -33,7 +33,11 @@ int main(int argc, char** argv) {
   string n_str(argv[3]);
   int n = stoi(n_str);
   cout << "Number of elements in array: " << n << endl;
-  Param::NUM_THREADS = 10;
+  
+  string num_str(argv[4]);
+  int num_threads = stoi(num_str);
+  Param::NUM_THREADS = num_threads;
+  cout << "Number of threads: " << Param::NUM_THREADS << endl;
 
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));
