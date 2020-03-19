@@ -13,6 +13,7 @@
 #include <fstream>
 #include <chrono>
 #include <NTL/BasicThreadPool.h>
+#include <omp.h>
 
 using namespace NTL;
 using namespace std;
