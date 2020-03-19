@@ -1143,7 +1143,7 @@ public:
   template<class T>
   void ReceiveElem(T& a, int from_pid, int fid = 0) {
     unsigned char *buf_ptr = buf;
-    sockets.find(from_pid)->second.ReceiveSecure(buf, ZZ_bytes[fid]);
+    sockets.find(from_pid)->second[omp_get_thread_num()].ReceiveSecure(buf, ZZ_bytes[fid]);
     ConvertBytes(a, buf_ptr, fid);
   }
   
@@ -1161,7 +1161,7 @@ public:
         } else {
           count = ZZ_per_buf[fid];
         }
-        sockets.find(from_pid)->second.ReceiveSecure(buf, count * ZZ_bytes[fid]);
+        sockets.find(from_pid)->second[omp_get_thread_num()].ReceiveSecure(buf, count * ZZ_bytes[fid]);
         stored_in_buf += count;
         remaining -= count;
         buf_ptr = buf;
@@ -1188,7 +1188,7 @@ public:
           } else {
             count = ZZ_per_buf[fid];
           }
-          sockets.find(from_pid)->second.ReceiveSecure(buf, count * ZZ_bytes[fid]);
+          sockets.find(from_pid)->second[omp_get_thread_num()].ReceiveSecure(buf, count * ZZ_bytes[fid]);
           stored_in_buf += count;
           remaining -= count;
           buf_ptr = buf;
@@ -1205,7 +1205,7 @@ public:
   void SendElem(T& a, int to_pid, int fid = 0) {
     unsigned char *buf_ptr = buf;
     BytesFromZZ(buf_ptr, AsZZ(a), ZZ_bytes[fid]);
-    sockets.find(to_pid)->second.SendSecure(buf, ZZ_bytes[fid]);
+    sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid]);
   }
   
   template<class T>
@@ -1214,7 +1214,7 @@ public:
     uint64_t stored_in_buf = 0;
     for (int i = 0; i < a.length(); i++) {
       if (stored_in_buf == ZZ_per_buf[fid]) {
-        sockets.find(to_pid)->second.SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
+        sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
         stored_in_buf = 0;
         buf_ptr = buf;
       }
@@ -1225,7 +1225,7 @@ public:
     }
   
     if (stored_in_buf > 0) {
-      sockets.find(to_pid)->second.SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
+      sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
     }
   }
   
@@ -1236,7 +1236,7 @@ public:
     for (int i = 0; i < a.NumRows(); i++) {
       for (int j = 0; j < a.NumCols(); j++) {
         if (stored_in_buf == ZZ_per_buf[fid]) {
-          sockets.find(to_pid)->second.SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
+          sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
           stored_in_buf = 0;
           buf_ptr = buf;
         }
@@ -1248,7 +1248,7 @@ public:
     }
   
     if (stored_in_buf > 0) {
-      sockets.find(to_pid)->second.SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
+      sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
     }
   }
   
@@ -1277,7 +1277,7 @@ public:
             } else {
               count = ZZ_per_buf[fid];
             }
-            sockets.find(from_pid)->second.ReceiveSecure(buf, count * ZZ_bytes[fid]);
+            sockets.find(from_pid)->second[omp_get_thread_num()].ReceiveSecure(buf, count * ZZ_bytes[fid]);
             stored_in_buf += count;
             remaining -= count;
             buf_ptr = buf;
@@ -1299,7 +1299,7 @@ public:
       for (int i = 0; i < a[k].NumRows(); i++) {
         for (int j = 0; j < a[k].NumCols(); j++) {
           if (stored_in_buf == ZZ_per_buf[fid]) {
-            sockets.find(to_pid)->second.SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
+            sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
             stored_in_buf = 0;
             buf_ptr = buf;
           }
@@ -1312,7 +1312,7 @@ public:
     }
   
     if (stored_in_buf > 0) {
-      sockets.find(to_pid)->second.SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
+      sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
     }
   }
 

@@ -223,7 +223,7 @@ bool MPCEnv::SetupChannels(vector< pair<int, int> > &pairs) {
       }
 
       // this ensures that the ports for 2 different pairs of threads on the same 2 machines do not overlap
-      port = port + + 2 * thread;
+      port = port + 2 * thread;
 
       ostringstream oss;
       oss << Param::KEY_PATH << "P" << p1 << "_P" << p2 << ".key";
@@ -322,9 +322,9 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
       }
 
       prg.insert(map<int, RandomStream>::value_type(pother, NewRandomStream(key)));
-      sockets[pother].SendSecure(key, key_len);
+      sockets[pother][0].SendSecure(key, key_len);
     } else {
-      sockets[pother].ReceiveSecure(key, key_len);
+      sockets[pother][0].ReceiveSecure(key, key_len);
       prg.insert(map<int, RandomStream>::value_type(pother, NewRandomStream(key)));
     }
 
@@ -338,8 +338,11 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
 
 void MPCEnv::CleanUp() {
   cout << "Closing sockets ... ";
-  for (map<int, CSocket>::iterator it = sockets.begin(); it != sockets.end(); ++it) {
-    CloseChannel(it->second);
+  for (map<int, map<int, CSocket>>::iterator it1 = sockets.begin(); it1 != sockets.end(); ++it1) {
+    map<int, CSocket> inner = it1->second;
+    for (map<int, CSocket>::iterator it2 = inner.begin(); it2 != inner.end(); ++it2) {
+      CloseChannel(it2->second);
+    }
   }
   cout << "done." << endl;
 }
@@ -356,10 +359,12 @@ void MPCEnv::ProfilerResetTimer() {
   int ind = 1;
   for (int p = 0; p < 3; p++) {
     if (p == pid) continue;
-    map<int, CSocket>::iterator it = sockets.find(p);
-    stat[ind] = it->second.GetBytesSent();
-    stat[ind+1] = it->second.GetBytesReceived();
-    it->second.ResetStats();
+    map<int, CSocket> inner = sockets[p];
+    for (int thread = 0; thread < Param::NUM_THREADS; thread++) {
+      stat[ind] += inner[thread].GetBytesSent();
+      stat[ind+1] += inner[thread].GetBytesReceived();
+      inner[thread].ResetStats();
+    }
     ind += 2;
   }
 
@@ -2344,24 +2349,24 @@ void MPCEnv::Read(Mat<ZZ_p>& a, ifstream& ifs, int nrows, int ncols) {
 void MPCEnv::SendInt(int num, int to_pid) {
   cout << "SendInt called: num(" << num << "), to_pid(" << to_pid << ")" << endl;
   *((int *)buf) = num;
-  sockets.find(to_pid)->second.Send(buf, sizeof(int));
+  sockets.find(to_pid)->second[omp_get_thread_num()].Send(buf, sizeof(int));
 }
 
 int MPCEnv::ReceiveInt(int from_pid) {
   cout << "ReceiveInt called: from_pid(" << from_pid << ")" << endl;
-  sockets.find(from_pid)->second.Receive(buf, sizeof(int));
+  sockets.find(from_pid)->second[omp_get_thread_num()].Receive(buf, sizeof(int));
   return *((int *)buf);
 }
 
 void MPCEnv::SendBool(bool flag, int to_pid) {
   cout << "SendBool called: flag(" << flag << "), to_pid(" << to_pid << ")" << endl;
   *((bool *)buf) = flag;
-  sockets.find(to_pid)->second.Send(buf, sizeof(bool));
+  sockets.find(to_pid)->second[omp_get_thread_num()].Send(buf, sizeof(bool));
 }
 
 bool MPCEnv::ReceiveBool(int from_pid) {
   cout << "ReceiveBool called: from_pid(" << from_pid << ")" << endl;
-  sockets.find(from_pid)->second.Receive(buf, sizeof(bool));
+  sockets.find(from_pid)->second[omp_get_thread_num()].Receive(buf, sizeof(bool));
   return *((bool *)buf);
 }
 
