@@ -349,19 +349,16 @@ private:
   
     /* Create and initialise the context */
     if (!(ctx = EVP_CIPHER_CTX_new())) {
-      cout << "case 1" << endl;
       return false;
     }
   
     /* Initialise the decryption operation. */
     if (!EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, NULL, NULL)) {
-      cout << "case 2" << endl;
       return false;
     }
   
     /* Initialise key and IV */
     if (!EVP_DecryptInit_ex(ctx, NULL, NULL, key, iv)) {
-      cout << "case 3" << endl;
       return false;
     }
   
@@ -369,7 +366,6 @@ private:
      * EVP_DecryptUpdate can be called multiple times if necessary
      */
     if (!EVP_DecryptUpdate(ctx, plaintext, &len, ciphertext, ciphertext_len)) {
-      cout << "case 4" << endl;
       return false;
     }
 
@@ -377,7 +373,6 @@ private:
   
     /* Set expected tag value. Works in OpenSSL 1.0.1d and later */
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, GCM_AUTH_TAG_LEN, tag)) {
-      cout << "case 5" << endl;
       return false;
     }
   
@@ -388,9 +383,6 @@ private:
   
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
-
-    cout << "case 6" << endl;
-    cout << "ret: " << ret << endl;
   
     return ret > 0;
   }
