@@ -388,6 +388,9 @@ private:
   
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
+
+    cout << "case 6" << endl;
+    cout << "ret: " << ret << endl;
   
     return ret > 0;
   }
