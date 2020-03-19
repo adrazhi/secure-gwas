@@ -207,6 +207,11 @@ bool MPCEnv::SetupChannels(vector< pair<int, int> > &pairs) {
       continue;
     }
 
+    int pother = p1 + p2 - pid;
+    ostringstream oss;
+    oss << Param::KEY_PATH << "P" << p1 << "_P" << p2 << ".key";
+    string key_file = oss.str();
+
     // for parallelization, create one socket for each pair of threads, rather than one socket for each pair of machines
     for (int thread = 0; thread < Param::NUM_THREADS; thread++) {
       int port = 8000;
@@ -225,11 +230,6 @@ bool MPCEnv::SetupChannels(vector< pair<int, int> > &pairs) {
       // this ensures that the ports for 2 different pairs of threads on the same 2 machines do not overlap
       port = port + 2 * thread;
 
-      ostringstream oss;
-      oss << Param::KEY_PATH << "P" << p1 << "_P" << p2 << ".key";
-      string key_file = oss.str();
-
-      int pother = p1 + p2 - pid;
       if (thread == 0) {
         sockets.insert(make_pair(pother, map<int, CSocket>()));
       }
