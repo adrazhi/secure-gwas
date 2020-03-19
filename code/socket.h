@@ -37,6 +37,7 @@ public:
 
   ~CSocket(){ 
     free(iv_prf);
+    iv_prf = NULL;
   }
 
 public:
