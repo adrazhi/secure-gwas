@@ -35,6 +35,13 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  if (argc == 4) {
+    string num_threads_str(argv[3]);
+    int num_threads = stoi(num_threads_str);
+    Param::NUM_THREADS = num_threads;
+  }
+  cout << "Number of threads: " << Param::NUM_THREADS << endl;
+
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));
   pairs.push_back(make_pair(0, 2));
