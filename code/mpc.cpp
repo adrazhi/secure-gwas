@@ -339,8 +339,7 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
 void MPCEnv::CleanUp() {
   cout << "Closing sockets ... ";
   for (map<int, map<int, CSocket>>::iterator it1 = sockets.begin(); it1 != sockets.end(); ++it1) {
-    map<int, CSocket> inner = it1->second;
-    for (map<int, CSocket>::iterator it2 = inner.begin(); it2 != inner.end(); ++it2) {
+    for (map<int, CSocket>::iterator it2 = it1->second.begin(); it2 != it1->second.end(); ++it2) {
       CloseChannel(it2->second);
     }
   }
