@@ -1564,7 +1564,6 @@ void MPCEnv::FPDiv(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   }
 
   int niter = 2 * ceil(log2(((double) Param::NBIT_K) / 3.5)) + 1;
-  if (debug) cout << "niter: " << niter << endl;
 
   /* Initial approximation: 1 / x_scaled ~= 5.9430 - 10 * x_scaled + 5 * x_scaled^2 */
   Vec<ZZ_p> s, s_sqrt;
