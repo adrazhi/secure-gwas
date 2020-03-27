@@ -93,8 +93,6 @@ int main(int argc, char** argv) {
     }
     print_vec("Vector 1", a_base, 5);
     print_vec("Vector 2", b_base, 5);
-    vector<int> c1_base(n, 0);
-    vector<int> c2_base(n, 0); 
 
     // Convert the data from double to FP
     Vec<ZZ_p> a, b;
@@ -125,10 +123,9 @@ int main(int argc, char** argv) {
     mpc.FPDiv(c1, a, b);
     gettimeofday(&end, NULL);
 
-    for (int i = 0; i < n; i++) {
-      FPToDouble(c1_base[i], c1[i], Param::NBIT_K, Param::NBIT_F);
-    }
-    print("Division (serial)", c1_base, 5);
+    Vec<double> c1_base;
+    FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
+    print_vec("Division (serial)", c1_base, 5);
     runtime = (end.tv_sec - start.tv_sec) * 1e6;
     runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
     cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
@@ -141,10 +138,9 @@ int main(int argc, char** argv) {
     mpc.FPDivParallel(c2, a, b);
     gettimeofday(&end, NULL);
 
-    for (int i = 0; i < n; i++) {
-      FPToDouble(c2_base[i], c2[i], Param::NBIT_K, Param::NBIT_F);
-    }
-    print("Division (parallel)", c2_base, 5);
+    Vec<double> c2_base;
+    FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
+    print_vec("Division (parallel)", c2_base, 5);
     runtime = (end.tv_sec - start.tv_sec) * 1e6;
     runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
     cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
@@ -156,11 +152,6 @@ int main(int argc, char** argv) {
 
   mpc.CleanUp();
 
-  if (success) {
-    cout << "Protocol successfully completed" << endl;
-    return 0;
-  } else {
-    cout << "Protocol abnormally terminated" << endl;
-    return 1;
-  }
+  cout << "Protocol successfully completed" << endl;
+  return 0;
 }
