@@ -84,10 +84,10 @@ int main(int argc, char** argv) {
     mpc.RestoreSeed();
 
     // Divide serially
-    Vec<ZZ_p> c1;
-    mpc.ProfilerPushState("div");
-    mpc.FPDiv(c1, a, b);
-    mpc.ProfilerPopState(false); // div
+    // Vec<ZZ_p> c1;
+    // mpc.ProfilerPushState("div");
+    // mpc.FPDiv(c1, a, b);
+    // mpc.ProfilerPopState(false); // div
 
     // Divide in parallel
     Vec<ZZ_p> c2;
@@ -134,22 +134,22 @@ int main(int argc, char** argv) {
     double runtime;
     
     // Divide serially
-    Vec<ZZ_p> c1;
-    gettimeofday(&start, NULL); 
-    ios_base::sync_with_stdio(false);
-    mpc.ProfilerPushState("div");
-    mpc.FPDiv(c1, a, b);
-    gettimeofday(&end, NULL);
-    mpc.ProfilerPopState(false); // div
+    // Vec<ZZ_p> c1;
+    // gettimeofday(&start, NULL); 
+    // ios_base::sync_with_stdio(false);
+    // mpc.ProfilerPushState("div");
+    // mpc.FPDiv(c1, a, b);
+    // gettimeofday(&end, NULL);
+    // mpc.ProfilerPopState(false); // div
 
-    runtime = (end.tv_sec - start.tv_sec) * 1e6;
-    runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-    cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
-    cout << " sec" << endl;
+    // runtime = (end.tv_sec - start.tv_sec) * 1e6;
+    // runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+    // cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
+    // cout << " sec" << endl;
 
-    Vec<double> c1_base;
-    FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
-    print_ntl_vec("Division (serial)", c1_base, 5);
+    // Vec<double> c1_base;
+    // FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
+    // print_ntl_vec("Division (serial)", c1_base, 5);
 
     // Divide in parallel
     Vec<ZZ_p> c2;
