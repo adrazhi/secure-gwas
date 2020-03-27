@@ -22,7 +22,7 @@ using namespace std;
 void print_vec(const char* name, vector<double> &vect, int num) {
   cout << name << ": ";
   for (int i = 0; i < num; i++) {
-    cout << vect[i];
+    cout << vect[i] << "  ";
   }
   cout << endl;
 }
@@ -30,7 +30,7 @@ void print_vec(const char* name, vector<double> &vect, int num) {
 void print_ntl_vec(const char* name, Vec<double> &vect, int num) {
   cout << name << ": ";
   for (int i = 0; i < num; i++) {
-    cout << vect[i];
+    cout << vect[i] << "  ";
   }
   cout << endl;
 }
@@ -103,6 +103,7 @@ int main(int argc, char** argv) {
     print_vec("Vector 2", b_base, 5);
 
     // Convert the data from double to FP
+    cout << "Converting double to FP ... ";
     Vec<ZZ_p> a, b;
     Init(a, n);
     Init(b, n);
@@ -110,8 +111,10 @@ int main(int argc, char** argv) {
       DoubleToFP(a[i], a_base[i], Param::NBIT_K, Param::NBIT_F);
       DoubleToFP(b[i], b_base[i], Param::NBIT_K, Param::NBIT_F);
     }
+    cout << "done" << endl;
     
     // Now generate the random mask and mask out the data
+    cout << "Masking data ... ";
     Vec<ZZ_p> ra, rb;
     mpc.SwitchSeed(1);
     MPCEnv::RandVec(ra, n);
@@ -119,6 +122,7 @@ int main(int argc, char** argv) {
     mpc.RestoreSeed();
     a -= ra;
     b -= rb;
+    cout << "done";
 
     // Party 2 prints profiling, i.e. runtime, data
     struct timeval start, end;
@@ -131,13 +135,14 @@ int main(int argc, char** argv) {
     mpc.FPDiv(c1, a, b);
     gettimeofday(&end, NULL);
 
-    Vec<double> c1_base;
-    FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
-    print_ntl_vec("Division (serial)", c1_base, 5);
     runtime = (end.tv_sec - start.tv_sec) * 1e6;
     runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
     cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
     cout << " sec" << endl;
+
+    Vec<double> c1_base;
+    FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
+    print_ntl_vec("Division (serial)", c1_base, 5);
 
     // Divide in parallel
     Vec<ZZ_p> c2;
@@ -146,13 +151,14 @@ int main(int argc, char** argv) {
     mpc.FPDivParallel(c2, a, b);
     gettimeofday(&end, NULL);
 
-    Vec<double> c2_base;
-    FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
-    print_ntl_vec("Division (parallel)", c2_base, 5);
     runtime = (end.tv_sec - start.tv_sec) * 1e6;
     runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
     cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
     cout << " sec" << endl;
+
+    Vec<double> c2_base;
+    FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
+    print_ntl_vec("Division (parallel)", c2_base, 5);
 
     // All done, so send signal to party 0
     mpc.SendBool(true, 0);
