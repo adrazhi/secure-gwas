@@ -1211,10 +1211,13 @@ public:
   
   template<class T>
   void SendVec(Vec<T>& a, int to_pid, int fid = 0) {
+    int thread1 = omp_get_thread_num();
     unsigned char *buf_ptr = buf;
     uint64_t stored_in_buf = 0;
     for (int i = 0; i < a.length(); i++) {
       if (stored_in_buf == ZZ_per_buf[fid]) {
+        int thread2 = omp_get_thread_num();
+        if (thread1 != thread2) cout << "thread mismatch" <<  endl;
         sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
         stored_in_buf = 0;
         buf_ptr = buf;
@@ -1232,11 +1235,14 @@ public:
   
   template<class T>
   void SendMat(Mat<T>& a, int to_pid, int fid = 0) {
+    int thread1 = omp_get_thread_num();
     unsigned char *buf_ptr = buf;
     uint64_t stored_in_buf = 0;
     for (int i = 0; i < a.NumRows(); i++) {
       for (int j = 0; j < a.NumCols(); j++) {
         if (stored_in_buf == ZZ_per_buf[fid]) {
+          int thread2 = omp_get_thread_num();
+          if (thread1 != thread2) cout << "thread mismatch" <<  endl;
           sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
           stored_in_buf = 0;
           buf_ptr = buf;
