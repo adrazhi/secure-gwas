@@ -227,8 +227,8 @@ bool MPCEnv::SetupChannels(vector< pair<int, int> > &pairs) {
         port = Param::PORT_P2_P3;
       }
 
-      // this ensures that the ports for 2 different pairs of threads on the same 2 machines do not overlap
-      port = port + 2 * thread;
+      // this ensures that the ports for 2 different pairs of threads for the same pair of machines do not overlap
+      port = port + 5 * thread;
 
       if (thread == 0) {
         sockets.insert(make_pair(pother, map<int, CSocket>()));
