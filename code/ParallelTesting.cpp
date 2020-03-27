@@ -20,11 +20,19 @@ using namespace NTL;
 using namespace std;
 
 void print_vec(const char* name, vector<double> &vect, int num) {
-    cout << name << ": ";
-    for (int i = 0; i < num; i++) {
-        cout << vect[i];
-    }
-    cout << endl;
+  cout << name << ": ";
+  for (int i = 0; i < num; i++) {
+    cout << vect[i];
+  }
+  cout << endl;
+}
+
+void print_ntl_vec(const char* name, Vec<double> &vect, int num) {
+  cout << name << ": ";
+  for (int i = 0; i < num; i++) {
+    cout << vect[i];
+  }
+  cout << endl;
 }
 
 int main(int argc, char** argv) {
@@ -125,7 +133,7 @@ int main(int argc, char** argv) {
 
     Vec<double> c1_base;
     FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
-    print_vec("Division (serial)", c1_base, 5);
+    print_ntl_vec("Division (serial)", c1_base, 5);
     runtime = (end.tv_sec - start.tv_sec) * 1e6;
     runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
     cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
@@ -140,7 +148,7 @@ int main(int argc, char** argv) {
 
     Vec<double> c2_base;
     FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
-    print_vec("Division (parallel)", c2_base, 5);
+    print_ntl_vec("Division (parallel)", c2_base, 5);
     runtime = (end.tv_sec - start.tv_sec) * 1e6;
     runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
     cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
