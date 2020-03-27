@@ -165,14 +165,14 @@ int main(int argc, char** argv) {
     cout << "Error: party_id should be 0, 1, 2, or 3" << endl;
     return 1;
   }
-
-  string round_str(argv[3]);
-  Param::Convert(round_str, Param::CUR_ROUND, "CUR_ROUND");
   
   if (!Param::ParseFile(argv[2])) {
     cout << "Could not finish parsing parameter file" << endl;
     return 1;
   }
+
+  string round_str(argv[3]);
+  Param::Convert(round_str, Param::CUR_ROUND, "CUR_ROUND");
 
   // Data Sharing Code should not be multi-threaded
   Param::NUM_THREADS = 1;

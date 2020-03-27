@@ -13,11 +13,26 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <random>
+#include <vector>
 
 using namespace NTL;
 using namespace std;
 
+void print_vec(const char* name, vector<double> &vect, int num) {
+    cout << name << ": ";
+    for (int i = 0; i < num; i++) {
+        cout << vect[i];
+    }
+    cout << endl;
+}
+
 int main(int argc, char** argv) {
+  if (argc < 5) {
+    cout << "Usage: ParallelTesting party_id param_file num_elements num_threads" << endl;
+    return 1;
+  }
+
   string pid_str(argv[1]);
   int pid;
   if (!Param::Convert(pid_str, pid, "party_id") || pid < 0 || pid > 2) {
@@ -49,41 +64,103 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  Vec<ZZ_p> a, b, c1, c2;
-  mpc.SwitchSeed(0);
-  mpc.RandVec(a, n);
-  cout << "Vector 1: " << a[0] << endl;
-  mpc.RandVec(b, n);
-  cout << "Vector 2: " << b[0] << endl;
-  mpc.RestoreSeed();
-  struct timeval start, end;
-  double runtime;
+  if (pid == 0) {
+    mpc.ReceiveBool(2);
+  } else if (pid == 1) {
+    // Reconstruct the random mask
+    Vec<ZZ_p> a, b;
+    mpc.SwitchSeed(2);
+    MPCEnv::RandVec(a, n);
+    MPCEnv::RandVec(b, n);
+    mpc.RestoreSeed();
 
-  gettimeofday(&start, NULL); 
-  ios_base::sync_with_stdio(false);
-  mpc.ProfilerPushState("div"); 
-  mpc.FPDiv(c1, a, b);
-  mpc.ProfilerPopState(false); // div
-  gettimeofday(&end, NULL); 
+    // Divide serially
+    Vec<ZZ_p> c1;
+    mpc.FPDiv(c1, a, b);
 
-  cout << "Division 1: " << c1[0] << endl;
+    // Divide in parallel
+    Vec<ZZ_p> c2;
+    mpc.FPDivParallel(c2, a, b);
+  } else {
+    // Generate vectors of random doubles to simulate data
+    std::uniform_real_distribution<double> unif(1, 10);
+    std::default_random_engine re;
+    auto rand_dbl = std::bind(unif, re);
+    vector<double> a_base, b_base;
+    for (int i = 0; i < n; i++) {
+      a_base.push_back(rand_dbl());
+      b_base.push_back(rand_dbl());
+    }
+    print_vec("Vector 1", a_base, 5);
+    print_vec("Vector 2", b_base, 5);
+    vector<int> c1_base(n, 0);
+    vector<int> c2_base(n, 0); 
 
-  runtime = (end.tv_sec - start.tv_sec) * 1e6;
-  runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-  cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
-  cout << " sec" << endl;
+    // Convert the data from double to FP
+    Vec<ZZ_p> a, b;
+    Init(a, n);
+    Init(b, n);
+    for (int i = 0; i < n; i++) {
+      DoubleToFP(a[i], a_base[i], Param::NBIT_K, Param::NBIT_F);
+      DoubleToFP(b[i], b_base[i], Param::NBIT_K, Param::NBIT_F);
+    }
+    
+    // Now generate the random mask and mask out the data
+    Vec<ZZ_p> ra, rb;
+    mpc.SwitchSeed(1);
+    MPCEnv::RandVec(ra, n);
+    MPCEnv::RandVec(rb, n);
+    mpc.RestoreSeed();
+    a -= ra;
+    b -= rb;
 
-  gettimeofday(&start, NULL); 
-  ios_base::sync_with_stdio(false); 
-  mpc.FPDivParallel(c2, a, b);
-  gettimeofday(&end, NULL); 
+    // Party 2 prints profiling, i.e. runtime, data
+    struct timeval start, end;
+    double runtime;
+    
+    // Divide serially
+    Vec<ZZ_p> c1;
+    gettimeofday(&start, NULL); 
+    ios_base::sync_with_stdio(false);
+    mpc.FPDiv(c1, a, b);
+    gettimeofday(&end, NULL);
 
-  cout << "Division 2: " << c2[0] << endl;
+    for (int i = 0; i < n; i++) {
+      FPToDouble(c1_base[i], c1[i], Param::NBIT_K, Param::NBIT_F);
+    }
+    print("Division (serial)", c1_base, 5);
+    runtime = (end.tv_sec - start.tv_sec) * 1e6;
+    runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+    cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
+    cout << " sec" << endl;
 
-  runtime = (end.tv_sec - start.tv_sec) * 1e6;
-  runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-  cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
-  cout << " sec" << endl; 
+    // Divide in parallel
+    Vec<ZZ_p> c2;
+    gettimeofday(&start, NULL); 
+    ios_base::sync_with_stdio(false);
+    mpc.FPDivParallel(c2, a, b);
+    gettimeofday(&end, NULL);
+
+    for (int i = 0; i < n; i++) {
+      FPToDouble(c2_base[i], c2[i], Param::NBIT_K, Param::NBIT_F);
+    }
+    print("Division (parallel)", c2_base, 5);
+    runtime = (end.tv_sec - start.tv_sec) * 1e6;
+    runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+    cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
+    cout << " sec" << endl;
+
+    // All done, so send signal to party 0
+    mpc.SendBool(true, 0);
+  }
 
   mpc.CleanUp();
+
+  if (success) {
+    cout << "Protocol successfully completed" << endl;
+    return 0;
+  } else {
+    cout << "Protocol abnormally terminated" << endl;
+    return 1;
+  }
 }
