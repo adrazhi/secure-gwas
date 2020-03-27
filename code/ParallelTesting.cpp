@@ -71,6 +71,7 @@ int main(int argc, char** argv) {
     cout << "MPC environment initialization failed" << endl;
     return 1;
   }
+  mpc.SetDebug(true);
 
   if (pid == 0) {
     mpc.ReceiveBool(2);
@@ -84,11 +85,15 @@ int main(int argc, char** argv) {
 
     // Divide serially
     Vec<ZZ_p> c1;
+    mpc.ProfilerPushState("div");
     mpc.FPDiv(c1, a, b);
+    mpc.ProfilerPopState(false); // div
 
     // Divide in parallel
     Vec<ZZ_p> c2;
+    mpc.ProfilerPushState("div");
     mpc.FPDivParallel(c2, a, b);
+    mpc.ProfilerPopState(false); // div
   } else {
     // Generate vectors of random doubles to simulate data
     std::uniform_real_distribution<double> unif(1, 10);
@@ -132,8 +137,10 @@ int main(int argc, char** argv) {
     Vec<ZZ_p> c1;
     gettimeofday(&start, NULL); 
     ios_base::sync_with_stdio(false);
+    mpc.ProfilerPushState("div");
     mpc.FPDiv(c1, a, b);
     gettimeofday(&end, NULL);
+    mpc.ProfilerPopState(false); // div
 
     runtime = (end.tv_sec - start.tv_sec) * 1e6;
     runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
@@ -148,8 +155,10 @@ int main(int argc, char** argv) {
     Vec<ZZ_p> c2;
     gettimeofday(&start, NULL); 
     ios_base::sync_with_stdio(false);
+    mpc.ProfilerPushState("div");
     mpc.FPDivParallel(c2, a, b);
     gettimeofday(&end, NULL);
+    mpc.ProfilerPopState(false); // div
 
     runtime = (end.tv_sec - start.tv_sec) * 1e6;
     runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
