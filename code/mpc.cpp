@@ -358,11 +358,10 @@ void MPCEnv::ProfilerResetTimer() {
   int ind = 1;
   for (int p = 0; p < 3; p++) {
     if (p == pid) continue;
-    map<int, CSocket> inner = sockets[p];
     for (int thread = 0; thread < Param::NUM_THREADS; thread++) {
-      stat[ind] += inner[thread].GetBytesSent();
-      stat[ind+1] += inner[thread].GetBytesReceived();
-      inner[thread].ResetStats();
+      stat[ind] += sockets[p][thread].GetBytesSent();
+      stat[ind+1] += sockets[p][thread].GetBytesReceived();
+      sockets[p][thread].ResetStats();
     }
     ind += 2;
   }
