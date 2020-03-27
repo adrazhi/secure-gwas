@@ -71,26 +71,22 @@ int main(int argc, char** argv) {
     cout << "MPC environment initialization failed" << endl;
     return 1;
   }
-  mpc.SetDebug(true);
+  // mpc.SetDebug(true);
 
-  if (pid == 0) {
-    mpc.ReceiveBool(2);
-  } else if (pid == 1) {
+  // Initialize vectors to hold inputs and outputs of division protocol
+  Vec<ZZ_p> a, b, c1, c2;
+  Init(a, n);
+  Init(b, n);
+  Init(c1, n);
+  Init(c2, n);
+
+  if (pid == 1) {
     // Reconstruct the random mask
-    Vec<ZZ_p> a, b;
     mpc.SwitchSeed(2);
     MPCEnv::RandVec(a, n);
     MPCEnv::RandVec(b, n);
     mpc.RestoreSeed();
-
-    // Divide serially
-    Vec<ZZ_p> c1;
-    mpc.FPDiv(c1, a, b);
-
-    // Divide in parallel
-    Vec<ZZ_p> c2;
-    mpc.FPDivParallel(c2, a, b);
-  } else {
+  } else if (pid == 2) {
     // Generate vectors of random doubles to simulate data
     std::uniform_real_distribution<double> unif(1, 10);
     std::default_random_engine re;
@@ -105,9 +101,6 @@ int main(int argc, char** argv) {
 
     // Convert the data from double to FP
     cout << "Converting double to FP ... ";
-    Vec<ZZ_p> a, b;
-    Init(a, n);
-    Init(b, n);
     for (int i = 0; i < n; i++) {
       DoubleToFP(a[i], a_base[i], Param::NBIT_K, Param::NBIT_F);
       DoubleToFP(b[i], b_base[i], Param::NBIT_K, Param::NBIT_F);
@@ -124,45 +117,43 @@ int main(int argc, char** argv) {
     a -= ra;
     b -= rb;
     cout << "done" << endl;
+  }
 
-    // Party 2 prints profiling, i.e. runtime, data
-    struct timeval start, end;
-    double runtime;
-    
-    // Divide serially
-    Vec<ZZ_p> c1;
-    gettimeofday(&start, NULL); 
-    ios_base::sync_with_stdio(false);
-    mpc.FPDiv(c1, a, b);
-    gettimeofday(&end, NULL);
+  struct timeval start, end;
+  double runtime;
 
-    runtime = (end.tv_sec - start.tv_sec) * 1e6;
-    runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+  // Divide serially
+  gettimeofday(&start, NULL); 
+  ios_base::sync_with_stdio(false);
+  mpc.FPDiv(c1, a, b);
+  gettimeofday(&end, NULL);
+
+  runtime = (end.tv_sec - start.tv_sec) * 1e6;
+  runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+  Vec<double> c1_base;
+  FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
+  
+  if (pid == 2) {
     cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
     cout << " sec" << endl;
-
-    Vec<double> c1_base;
-    FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
     print_ntl_vec("Division (serial)", c1_base, 5);
+  }
 
-    // Divide in parallel
-    Vec<ZZ_p> c2;
-    gettimeofday(&start, NULL); 
-    ios_base::sync_with_stdio(false);
-    mpc.FPDivParallel(c2, a, b);
-    gettimeofday(&end, NULL);
+  // Divide in parallel
+  gettimeofday(&start, NULL); 
+  ios_base::sync_with_stdio(false);
+  mpc.FPDivParallel(c2, a, b);
+  gettimeofday(&end, NULL);
 
-    runtime = (end.tv_sec - start.tv_sec) * 1e6;
-    runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+  runtime = (end.tv_sec - start.tv_sec) * 1e6;
+  runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+  Vec<double> c2_base;
+  FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
+  
+  if (pid == 2) {
     cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
     cout << " sec" << endl;
-
-    Vec<double> c2_base;
-    FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
     print_ntl_vec("Division (parallel)", c2_base, 5);
-
-    // All done, so send signal to party 0
-    mpc.SendBool(true, 0);
   }
 
   mpc.CleanUp();
