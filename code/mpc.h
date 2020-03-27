@@ -1162,6 +1162,7 @@ public:
         } else {
           count = ZZ_per_buf[fid];
         }
+        cout << "(Receive) Curr thread: " << omp_get_thread_num();
         sockets.find(from_pid)->second[omp_get_thread_num()].ReceiveSecure(buf, count * ZZ_bytes[fid]);
         stored_in_buf += count;
         remaining -= count;
@@ -1189,6 +1190,7 @@ public:
           } else {
             count = ZZ_per_buf[fid];
           }
+          cout << "(Receive) Curr thread: " << omp_get_thread_num();
           sockets.find(from_pid)->second[omp_get_thread_num()].ReceiveSecure(buf, count * ZZ_bytes[fid]);
           stored_in_buf += count;
           remaining -= count;
@@ -1215,6 +1217,7 @@ public:
     uint64_t stored_in_buf = 0;
     for (int i = 0; i < a.length(); i++) {
       if (stored_in_buf == ZZ_per_buf[fid]) {
+        cout << "(Send) Curr thread: " << omp_get_thread_num();
         sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
         stored_in_buf = 0;
         buf_ptr = buf;
@@ -1237,6 +1240,7 @@ public:
     for (int i = 0; i < a.NumRows(); i++) {
       for (int j = 0; j < a.NumCols(); j++) {
         if (stored_in_buf == ZZ_per_buf[fid]) {
+          cout << "(Send) Curr thread: " << omp_get_thread_num();
           sockets.find(to_pid)->second[omp_get_thread_num()].SendSecure(buf, ZZ_bytes[fid] * stored_in_buf);
           stored_in_buf = 0;
           buf_ptr = buf;

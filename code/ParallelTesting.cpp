@@ -134,9 +134,11 @@ int main(int argc, char** argv) {
   Vec<double> c1_base;
   FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
   
-  cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
-  cout << " sec" << endl;
-  print_ntl_vec("Division (serial)", c1_base, 5);
+  if (pid == 2) {
+    cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
+    cout << " sec" << endl;
+    print_ntl_vec("Division (serial)", c1_base, 5);
+  }
 
   // Divide in parallel
   gettimeofday(&start, NULL); 
@@ -150,10 +152,12 @@ int main(int argc, char** argv) {
   Vec<double> c2_base;
   FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
   
-  cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
-  cout << " sec" << endl;
-  print_ntl_vec("Division (parallel)", c2_base, 5);
-  
+  if (pid == 2) {
+    cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
+    cout << " sec" << endl;
+    print_ntl_vec("Division (parallel)", c2_base, 5);
+  }
+
   mpc.CleanUp();
 
   cout << "Protocol successfully completed" << endl;
