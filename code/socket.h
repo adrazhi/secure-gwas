@@ -215,7 +215,8 @@ public:
     } else {
       if (!Decrypt(pBuf, nLen)) {
         cerr << "CSocket::ReceiveSecure: decryption failed" << endl;
-        cout << "thread: " << omp_get_thread_num() << endl;
+        throw std::invalid_argument("decryption error for backtracking");
+        // cout << "thread: " << omp_get_thread_num() << endl;
         return -1;
       }
       return nLen;
