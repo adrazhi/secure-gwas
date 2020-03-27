@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <omp.h>
 
 #include "crypto.h"
 #include "util.h"
@@ -214,6 +215,7 @@ public:
     } else {
       if (!Decrypt(pBuf, nLen)) {
         cerr << "CSocket::ReceiveSecure: decryption failed" << endl;
+        cout << "thread: " omp_get_thread_num() << endl;
         return -1;
       }
       return nLen;
