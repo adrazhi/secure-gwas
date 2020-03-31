@@ -1407,7 +1407,8 @@ private:
 
   int pid;
   int cur_prg_pid;
-  unsigned char *buf;
+  unsigned char *buf; // use this for single-threaded communication
+  map<int, unsigned char*> buf_map; // use this for multi-threaded communication
   bool debug;
 
   Vec<ZZ> primes;

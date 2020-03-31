@@ -89,6 +89,14 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
     cout << "Allocated MPC buffer of size " << Param::MPC_BUF_SIZE << endl;
   }
 
+  for (int thread = 0; thread < Param::NUM_THREADS; thread++) {
+    buf_map[thread] = (unsigned char *) malloc(Param::MPC_BUF_SIZE + GCM_AUTH_TAG_LEN);
+    if (buf_map[thread] == NULL) {
+      cout << "Fail to allocate MPC buffer" << endl;
+      exit(1);
+    }
+  }
+
   cout << "Number of bytes per ZZ_p: " << ZZ_bytes[0] << endl;
 
   cout << "Setting up lookup tables" << endl;
