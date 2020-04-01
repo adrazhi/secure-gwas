@@ -1391,8 +1391,9 @@ public:
 
 
 private:
-  map<int, map<int, CSocket>> sockets;
-  map<int, RandomStream> prg;
+  map<int, map<int, CSocket>> sockets; // key 1 is pid; key 2 is thread number
+  map<int, RandomStream> prg; // use this for internal and global prg
+  map<int, map<int, RandomStream>> shared_prg; // key 1 is pid; key 2 is thread number
 
   /* Table lookup cache */
   Vec< Mat<ZZ_p> > table_cache;

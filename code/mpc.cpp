@@ -322,21 +322,36 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
 
     int pother = p1 + p2 - pid;
 
-    if (p1 == pid) {
-      bytes = randread(key, key_len);
-      if (bytes != key_len) {
-        cout << "Failed to generate a shared PRG key" << endl;
-        return false;
-      }
+    // for parallelization, create one PRG for each pair of threads, rather than one PRG for each pair of machines
+    for (int thread = 0; thread < Param::NUM_THREADS; thread++) {
+      if (p1 == pid) {
+        bytes = randread(key, key_len);
+        if (bytes != key_len) {
+          cout << "Failed to generate a shared PRG key" << endl;
+          return false;
+        }
 
-      prg.insert(map<int, RandomStream>::value_type(pother, NewRandomStream(key)));
-      sockets[pother][0].SendSecure(key, key_len);
-    } else {
-      sockets[pother][0].ReceiveSecure(key, key_len);
-      prg.insert(map<int, RandomStream>::value_type(pother, NewRandomStream(key)));
+        // create and store the PRG
+        if (thread == 0) {
+          shared_prg.insert(make_pair(pother, map<int, RandomStream>()));
+        }
+        shared_prg.find(pother)->second.insert(map<int, RandomStream>::value_type(thread, NewRandomStream(key)));
+
+        // securely share the key with the other machine
+        sockets[pother][thread].SendSecure(key, key_len);
+      } else {
+        // receive the key for generating the PRG
+        sockets[pother][thread].ReceiveSecure(key, key_len);
+
+        // create and store the PRG
+        if (thread == 0) {
+          shared_prg.insert(make_pair(pother, map<int, RandomStream>()));
+        }
+        shared_prg.find(pother)->second.insert(map<int, RandomStream>::value_type(thread, NewRandomStream(key)));
+      }
     }
 
-    cout << "Shared PRG with P" << pother << " initialized" << endl;
+    cout << "Shared PRGs with P" << pother << " initialized" << endl;
   }
 
   cout << "PRG setup complete" << endl;
