@@ -1114,13 +1114,15 @@ public:
 };
 
 
-
-
 void RandomBnd(ZZ& x, const ZZ& n);
 // x = "random number" in the range 0..n-1, or 0  if n <= 0
 
 inline ZZ RandomBnd(const ZZ& n)
    { ZZ x; RandomBnd(x, n); NTL_OPT_RETURN(ZZ, x); }
+
+/* begin shreyanj code */
+void RandomBnd(ZZ& x, const ZZ& n, RandomStream& stream);
+/* end shreyanj code */
 
 
 void RandomLen(ZZ& x, long NumBits);
@@ -1136,6 +1138,13 @@ void RandomBits(ZZ& x, long NumBits);
 
 inline ZZ RandomBits_ZZ(long NumBits)
    { ZZ x; RandomBits(x, NumBits); NTL_OPT_RETURN(ZZ, x); }
+
+/* begin shreyanj code */
+void RandomBits(ZZ& x, long NumBits, RandomStream& stream);
+
+inline ZZ RandomBits_ZZ(long NumBits, RandomStream& stream)
+   { ZZ x; RandomBits(x, NumBits, stream); NTL_OPT_RETURN(ZZ, x); }
+/* end shreyanj code */
 
 
 // single-precision version of the above

@@ -2041,7 +2041,15 @@ long RandomBnd(long bnd)
 
 
 
+/* begin shreyanj code */
+
 void RandomBits(ZZ& x, long l)
+{
+   RandomStream& stream = LocalGetCurrentRandomStream();
+   RandomBits(x, l, stream);
+}
+
+void RandomBits(ZZ& x, long NumBits, RandomStream& stream)
 {
    if (l <= 0) {
       x = 0;
@@ -2050,8 +2058,6 @@ void RandomBits(ZZ& x, long l)
 
    if (NTL_OVERFLOW(l, 1, 0))
       ResourceError("RandomBits: length too big");
-
-   RandomStream& stream = LocalGetCurrentRandomStream();
 
    long nb = (l+7)/8;
    unsigned long mask = (1UL << (8 - nb*8 + l)) - 1UL;
@@ -2070,6 +2076,8 @@ void RandomBits(ZZ& x, long l)
    
    ZZFromBytes(x, buf, nb);
 }
+
+/* end shreyanj code */
 
 
 void RandomLen(ZZ& x, long l)
@@ -2128,14 +2136,20 @@ candidate if this is already too large.
 
 ***********************************************************/
 
+/* Begin shreyanj code */
+
 void RandomBnd(ZZ& x, const ZZ& bnd)
+{
+   RandomStream& stream = LocalGetCurrentRandomStream();
+   RandomBnd(x, bnd, stream);
+}
+
+void RandomBnd(ZZ& x, const ZZ& bnd, RandomStream& stream)
 {
    if (bnd <= 1) {
       x = 0;
       return;
    }
-
-   RandomStream& stream = LocalGetCurrentRandomStream();
 
    long l = NumBits(bnd);
    long nb = (l+7)/8;
@@ -2190,6 +2204,8 @@ void RandomBnd(ZZ& x, const ZZ& bnd)
       if (hpart < lhbnd || x < bnd_ref) break;
    }
 }
+
+/* End shreyanj code */
 
 
 
