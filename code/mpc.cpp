@@ -35,7 +35,7 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
     return false;
   }
   
-  SetSeed(prg.find(pid)->second);
+  SetSeed(prg.find(pid)->second.find(omp_get_thread_num())->second);
   cur_prg_pid = pid;
 
   primes.SetLength(3);
@@ -288,8 +288,10 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
     return false;
   }
 
-  prg.insert(map<int, RandomStream>::value_type(pid, NewRandomStream(key)));
-  
+  // create only 1 internal PRG with the thread key 0
+  prg.insert(make_pair(pid, map<int, RandomStream>()));
+  prg.find(pid)->second.insert(map<int, RandomStream>::value_type(0, NewRandomStream(key)));
+
   /* Global PRG */
   ifstream ifs;
   string key_file = Param::KEY_PATH + "global.key";
@@ -309,7 +311,9 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
   AESStream aes(key);
   aes.get(key, key_len);
 
-  prg.insert(map<int, RandomStream>::value_type(-1, NewRandomStream(key)));
+  // create only 1 global PRG with the thread key 0
+  prg.insert(make_pair(-1, map<int, RandomStream>()));
+  prg.find(-1)->second.insert(map<int, RandomStream>::value_type(0, NewRandomStream(key)));
 
   /* Shared PRG (pairwise) */
   for (int i = 0; i < pairs.size(); i++) {
@@ -322,7 +326,7 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
 
     int pother = p1 + p2 - pid;
 
-    // for parallelization, create one PRG for each pair of threads, rather than one PRG for each pair of machines
+    // create one PRG for each pair of threads on each pair of machines
     for (int thread = 0; thread < Param::NUM_THREADS; thread++) {
       if (p1 == pid) {
         bytes = randread(key, key_len);
@@ -333,9 +337,9 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
 
         // create and store the PRG
         if (thread == 0) {
-          shared_prg.insert(make_pair(pother, map<int, RandomStream>()));
+          prg.insert(make_pair(pother, map<int, RandomStream>()));
         }
-        shared_prg.find(pother)->second.insert(map<int, RandomStream>::value_type(thread, NewRandomStream(key)));
+        prg.find(pother)->second.insert(map<int, RandomStream>::value_type(thread, NewRandomStream(key)));
 
         // securely share the key with the other machine
         sockets[pother][thread].SendSecure(key, key_len);
@@ -345,9 +349,9 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
 
         // create and store the PRG
         if (thread == 0) {
-          shared_prg.insert(make_pair(pother, map<int, RandomStream>()));
+          prg.insert(make_pair(pother, map<int, RandomStream>()));
         }
-        shared_prg.find(pother)->second.insert(map<int, RandomStream>::value_type(thread, NewRandomStream(key)));
+        prg.find(pother)->second.insert(map<int, RandomStream>::value_type(thread, NewRandomStream(key)));
       }
     }
 
