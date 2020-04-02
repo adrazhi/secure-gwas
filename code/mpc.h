@@ -1354,7 +1354,7 @@ public:
     RandomBnd(a, primes[fid], prg[thread][cur_prg_pid[thread]]);
   }
 
-  static void RandElem(ZZ_p& a, int fid = 0) {
+  void RandElem(ZZ_p& a, int fid = 0) {
     int thread = omp_get_thread_num();
     RandomZZ_p(a, prg[thread][cur_prg_pid[thread]]);
   }
@@ -1366,7 +1366,7 @@ public:
       RandomBnd(a[i], primes[fid], prg[thread][cur_prg_pid[thread]]);
   }
 
-  static void RandVec(Vec<ZZ_p>& a, int n, int fid = 0) {
+  void RandVec(Vec<ZZ_p>& a, int n, int fid = 0) {
     a.SetLength(n);
     int thread = omp_get_thread_num();
     for (int i = 0; i < n; i++)
@@ -1381,7 +1381,7 @@ public:
         RandomBnd(a[i][j], primes[fid], prg[thread][cur_prg_pid[thread]]);
   }
   
-  static void RandMat(Mat<ZZ_p>& a, int nrows, int ncols, int fid = 0) {
+  void RandMat(Mat<ZZ_p>& a, int nrows, int ncols, int fid = 0) {
     a.SetDims(nrows, ncols);
     int thread = omp_get_thread_num();
     for (int i = 0; i < nrows; i++)
@@ -1389,7 +1389,7 @@ public:
         RandomZZ_p(a[i][j], prg[thread][cur_prg_pid[thread]]);
   }
 
-  static void RandMatBits(Mat<ZZ_p>& a, int nrows, int ncols, int bitlen) {
+  void RandMatBits(Mat<ZZ_p>& a, int nrows, int ncols, int bitlen) {
     a.SetDims(nrows, ncols);
     int thread = omp_get_thread_num();
     for (int i = 0; i < nrows; i++)
