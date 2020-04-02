@@ -9,6 +9,7 @@
 #include <stack>
 #include <NTL/mat_ZZ_p.h>
 #include <NTL/mat_ZZ.h>
+#include <NTL/ZZ.h>
 #include <sstream>
 #include <fstream>
 #include <chrono>
