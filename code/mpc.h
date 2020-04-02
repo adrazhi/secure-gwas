@@ -1635,6 +1635,7 @@ private:
 
   void RandMatBits(Mat<ZZ>& a, int nrows, int ncols, int bitlen) {
     a.SetDims(nrows, ncols);
+    int thread = omp_get_thread_num();
     for (int i = 0; i < nrows; i++)
       for (int j = 0; j < ncols; j++)
         a[i][j] = RandomBits_ZZ(bitlen, prg[thread][cur_prg_pid[thread]]);
