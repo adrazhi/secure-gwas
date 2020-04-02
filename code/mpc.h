@@ -1356,21 +1356,21 @@ public:
 
   void RandElem(ZZ_p& a, int fid = 0) {
     int thread = omp_get_thread_num();
-    RandomZZ_p(a, prg[thread][cur_prg_pid[thread]]);
+    RandomZZ_p(a, prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second);
   }
 
   void RandVec(Vec<ZZ>& a, int n, int fid) {
     a.SetLength(n);
     int thread = omp_get_thread_num();
     for (int i = 0; i < n; i++)
-      RandomBnd(a[i], primes[fid], prg[thread][cur_prg_pid[thread]]);
+      RandomBnd(a[i], primes[fid], prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second);
   }
 
   void RandVec(Vec<ZZ_p>& a, int n, int fid = 0) {
     a.SetLength(n);
     int thread = omp_get_thread_num();
     for (int i = 0; i < n; i++)
-      RandomZZ_p(a[i], prg[thread][cur_prg_pid[thread]]);
+      RandomZZ_p(a[i], prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second);
   }
 
   void RandMat(Mat<ZZ>& a, int nrows, int ncols, int fid) {
@@ -1378,7 +1378,7 @@ public:
     int thread = omp_get_thread_num();
     for (int i = 0; i < nrows; i++)
       for (int j = 0; j < ncols; j++)
-        RandomBnd(a[i][j], primes[fid], prg[thread][cur_prg_pid[thread]]);
+        RandomBnd(a[i][j], primes[fid], prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second);
   }
   
   void RandMat(Mat<ZZ_p>& a, int nrows, int ncols, int fid = 0) {
@@ -1386,7 +1386,7 @@ public:
     int thread = omp_get_thread_num();
     for (int i = 0; i < nrows; i++)
       for (int j = 0; j < ncols; j++)
-        RandomZZ_p(a[i][j], prg[thread][cur_prg_pid[thread]]);
+        RandomZZ_p(a[i][j], prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second);
   }
 
   void RandMatBits(Mat<ZZ_p>& a, int nrows, int ncols, int bitlen) {
@@ -1394,7 +1394,7 @@ public:
     int thread = omp_get_thread_num();
     for (int i = 0; i < nrows; i++)
       for (int j = 0; j < ncols; j++)
-        a[i][j] = conv<ZZ_p>(RandomBits_ZZ(bitlen, prg[thread][cur_prg_pid[thread]]));
+        a[i][j] = conv<ZZ_p>(RandomBits_ZZ(bitlen, prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second));
   }
   
   // a contains column indices (1-based) into cached tables
@@ -1638,7 +1638,7 @@ private:
     int thread = omp_get_thread_num();
     for (int i = 0; i < nrows; i++)
       for (int j = 0; j < ncols; j++)
-        a[i][j] = RandomBits_ZZ(bitlen, prg[thread][cur_prg_pid[thread]]);
+        a[i][j] = RandomBits_ZZ(bitlen, prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second);
   }
 
   template<class T>
