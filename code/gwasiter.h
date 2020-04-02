@@ -119,13 +119,13 @@ private:
     } else if (pid == 1) {
       mpc->SwitchSeed(3);
       if (pheno_flag) {
-        MPCEnv::RandVec(p, 1 + Param::NUM_COVS);
+        mpc->RandVec(p, 1 + Param::NUM_COVS);
       }
       if (missing_flag) {
-        MPCEnv::RandMat(g, 3, Param::NUM_SNPS);
-        MPCEnv::RandVec(m, Param::NUM_SNPS);
+        mpc->RandMat(g, 3, Param::NUM_SNPS);
+        mpc->RandVec(m, Param::NUM_SNPS);
       } else {
-        MPCEnv::RandMat(g, 1, Param::NUM_SNPS);
+        mpc->RandMat(g, 1, Param::NUM_SNPS);
       }
       mpc->RestoreSeed();
     }

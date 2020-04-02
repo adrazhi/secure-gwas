@@ -83,8 +83,8 @@ int main(int argc, char** argv) {
   if (pid == 1) {
     // Reconstruct the random mask
     mpc.SwitchSeed(2);
-    MPCEnv::RandVec(a, n);
-    MPCEnv::RandVec(b, n);
+    mpc.RandVec(a, n);
+    mpc.RandVec(b, n);
     mpc.RestoreSeed();
   } else if (pid == 2) {
     // Generate vectors of random doubles to simulate data
@@ -111,8 +111,8 @@ int main(int argc, char** argv) {
     cout << "Masking data ... ";
     Vec<ZZ_p> ra, rb;
     mpc.SwitchSeed(1);
-    MPCEnv::RandVec(ra, n);
-    MPCEnv::RandVec(rb, n);
+    mpc.RandVec(ra, n);
+    mpc.RandVec(rb, n);
     mpc.RestoreSeed();
     a -= ra;
     b -= rb;

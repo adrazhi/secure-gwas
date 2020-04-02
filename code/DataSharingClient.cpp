@@ -67,7 +67,7 @@ bool send_stream(string data_dir, MPCEnv& mpc, int mode) {
 
       Vec<ZZ_p> rp;
       mpc.SwitchSeed(1);
-      MPCEnv::RandVec(rp, 1 + Param::NUM_COVS);
+      mpc.RandVec(rp, 1 + Param::NUM_COVS);
       mpc.RestoreSeed();
 
       p -= rp;
@@ -122,10 +122,10 @@ bool send_stream(string data_dir, MPCEnv& mpc, int mode) {
     Vec<ZZ_p> rm;
     mpc.SwitchSeed(1);
     if (missing_flag) {
-      MPCEnv::RandMat(rg, 3, Param::NUM_SNPS);
-      MPCEnv::RandVec(rm, Param::NUM_SNPS);
+      mpc.RandMat(rg, 3, Param::NUM_SNPS);
+      mpc.RandVec(rm, Param::NUM_SNPS);
     } else {
-      MPCEnv::RandMat(rg, 1, Param::NUM_SNPS);
+      mpc.RandMat(rg, 1, Param::NUM_SNPS);
     }
     mpc.RestoreSeed();
 
