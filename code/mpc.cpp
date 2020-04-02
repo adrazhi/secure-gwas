@@ -35,9 +35,6 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
     return false;
   }
   
-  SetSeed(prg.find(pid)->second.find(omp_get_thread_num())->second);
-  cur_prg_pid = pid;
-
   primes.SetLength(3);
   primes[0] = ZZ_p::modulus();
 
@@ -281,53 +278,51 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
   int key_len = NTL_PRG_KEYLEN; // from NTL
   unsigned char key[NTL_PRG_KEYLEN + GCM_AUTH_TAG_LEN];
 
-  /* Internal PRG */
-  int bytes = randread(key, key_len);
-  if (bytes != key_len) {
-    cout << "Failed to generate an internal PRG key" << endl;
-    return false;
-  }
+  // create PRGs for each thread that will run on this machine
+  for (int thread = 0; thread < Param::NUM_THREADS; thread++) {
+    prg.insert(make_pair(thread, map<int, RandomStream>()));
 
-  // create only 1 internal PRG with the thread key 0
-  prg.insert(make_pair(pid, map<int, RandomStream>()));
-  prg.find(pid)->second.insert(map<int, RandomStream>::value_type(0, NewRandomStream(key)));
-
-  /* Global PRG */
-  ifstream ifs;
-  string key_file = Param::KEY_PATH + "global.key";
-  ifs.open(key_file.c_str(), ios::binary);
-  if (!ifs.is_open()) {
-    cout << "Failed to open global PRG key file: " << key_file << endl;
-    return false;
-  }
-
-  ifs.read((char *)key, PRF_KEY_BYTES);
-  if (ifs.gcount() != PRF_KEY_BYTES) {
-    cout << "Failed to read " << PRF_KEY_BYTES << " bytes from global key file: " << key_file << endl;
-    return false;
-  }
-  ifs.close();
-
-  AESStream aes(key);
-  aes.get(key, key_len);
-
-  // create only 1 global PRG with the thread key 0
-  prg.insert(make_pair(-1, map<int, RandomStream>()));
-  prg.find(-1)->second.insert(map<int, RandomStream>::value_type(0, NewRandomStream(key)));
-
-  /* Shared PRG (pairwise) */
-  for (int i = 0; i < pairs.size(); i++) {
-    int p1 = pairs[i].first;
-    int p2 = pairs[i].second;
-
-    if (p1 != pid && p2 != pid) {
-      continue;
+    /* Internal PRG */
+    int bytes = randread(key, key_len);
+    if (bytes != key_len) {
+      cout << "Failed to generate an internal PRG key" << endl;
+      return false;
     }
 
-    int pother = p1 + p2 - pid;
+    prg.find(thread)->second.insert(map<int, RandomStream>::value_type(pid, NewRandomStream(key)));
 
-    // create one PRG for each pair of threads on each pair of machines
-    for (int thread = 0; thread < Param::NUM_THREADS; thread++) {
+    /* Global PRG */
+    ifstream ifs;
+    string key_file = Param::KEY_PATH + "global.key";
+    ifs.open(key_file.c_str(), ios::binary);
+    if (!ifs.is_open()) {
+      cout << "Failed to open global PRG key file: " << key_file << endl;
+      return false;
+    }
+
+    ifs.read((char *)key, PRF_KEY_BYTES);
+    if (ifs.gcount() != PRF_KEY_BYTES) {
+      cout << "Failed to read " << PRF_KEY_BYTES << " bytes from global key file: " << key_file << endl;
+      return false;
+    }
+    ifs.close();
+
+    AESStream aes(key);
+    aes.get(key, key_len);
+
+    prg.find(thread)->second.insert(map<int, RandomStream>::value_type(-1, NewRandomStream(key)));
+
+    /* Shared PRG (pairwise) */
+    for (int i = 0; i < pairs.size(); i++) {
+      int p1 = pairs[i].first;
+      int p2 = pairs[i].second;
+
+      if (p1 != pid && p2 != pid) {
+        continue;
+      }
+
+      int pother = p1 + p2 - pid;
+
       if (p1 == pid) {
         bytes = randread(key, key_len);
         if (bytes != key_len) {
@@ -336,10 +331,7 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
         }
 
         // create and store the PRG
-        if (thread == 0) {
-          prg.insert(make_pair(pother, map<int, RandomStream>()));
-        }
-        prg.find(pother)->second.insert(map<int, RandomStream>::value_type(thread, NewRandomStream(key)));
+        prg.find(thread)->second.insert(map<int, RandomStream>::value_type(pother, NewRandomStream(key)));
 
         // securely share the key with the other machine
         sockets[pother][thread].SendSecure(key, key_len);
@@ -348,14 +340,11 @@ bool MPCEnv::SetupPRGs(vector< pair<int, int> > &pairs) {
         sockets[pother][thread].ReceiveSecure(key, key_len);
 
         // create and store the PRG
-        if (thread == 0) {
-          prg.insert(make_pair(pother, map<int, RandomStream>()));
-        }
-        prg.find(pother)->second.insert(map<int, RandomStream>::value_type(thread, NewRandomStream(key)));
+        prg.find(thread)->second.insert(map<int, RandomStream>::value_type(pother, NewRandomStream(key)));
       }
     }
 
-    cout << "Shared PRGs with P" << pother << " initialized" << endl;
+    cur_prg_pid[thread] = pid;
   }
 
   cout << "PRG setup complete" << endl;
@@ -2396,15 +2385,13 @@ bool MPCEnv::ReceiveBool(int from_pid) {
 }
 
 void MPCEnv::SwitchSeed(int pid) {
-  prg.find(cur_prg_pid)->second = GetCurrentRandomStream();
-  SetSeed(prg.find(pid)->second);
-  cur_prg_pid = pid;
+  cur_prg_pid[omp_get_thread_num()] = pid;
 }
 
 void MPCEnv::ExportSeed(fstream& ofs, int pid) {
   assert(ofs.is_open());
 
-  RandomStream rs = prg.find(pid)->second;
+  RandomStream rs = prg.find(omp_get_thread_num())->second.find(pid)->second;
   rs.serialize(buf);
 
   ofs.write((const char *)buf, RandomStream::numBytes());
@@ -2413,7 +2400,8 @@ void MPCEnv::ExportSeed(fstream& ofs, int pid) {
 void MPCEnv::ExportSeed(fstream& ofs) {
   assert(ofs.is_open());
 
-  RandomStream rs = GetCurrentRandomStream();
+  int thread = omp_get_thread_num();
+  RandomStream rs = prg[thread][cur_prg_pid[thread]];
   rs.serialize(buf);
 
   ofs.write((const char *)buf, RandomStream::numBytes());
@@ -2424,12 +2412,14 @@ void MPCEnv::ImportSeed(int newid, ifstream& ifs) {
 
   ifs.read((char *)buf, RandomStream::numBytes());
 
-  RandomStream rs((const unsigned char *)buf, true);
+  for (map<int, map<int, RandomStream>>::iterator it1 = prg.begin(); it1 != prg.end(); ++it1) {
+    RandomStream rs((const unsigned char *)buf, true);
 
-  pair<map<int,RandomStream>::iterator,bool> ret;
-  ret = prg.insert(pair<int, RandomStream>(newid, rs));
-  if (!ret.second) { // ID exists already
-    ret.first->second = rs;
+    pair<map<int, RandomStream>::iterator, bool> ret;
+    ret = it1->second.insert(pair<int, RandomStream>(newid, rs));
+    if (!ret.second) { // ID exists already
+      ret.first->second = rs;
+    }
   }
 }
 

@@ -1344,45 +1344,57 @@ public:
     debug = flag;
   }
 
+  // Override of random function from ZZ_p.h that takes the random stream as input
+  inline void RandomZZ_p(ZZ_p& x, RandomStream& stream) {
+    RandomBnd(x._ZZ_p__rep, ZZ_p::modulus(), stream);
+  }
+
   void RandElem(ZZ& a, int fid) {
-    RandomBnd(a, primes[fid]);
+    int thread = omp_get_thread_num();
+    RandomBnd(a, primes[fid], prg[thread][cur_prg_pid[thread]]);
   }
 
   static void RandElem(ZZ_p& a, int fid = 0) {
-    random(a);
+    int thread = omp_get_thread_num();
+    RandomZZ_p(a, prg[thread][cur_prg_pid[thread]]);
   }
 
   void RandVec(Vec<ZZ>& a, int n, int fid) {
     a.SetLength(n);
+    int thread = omp_get_thread_num();
     for (int i = 0; i < n; i++)
-      RandomBnd(a[i], primes[fid]);
+      RandomBnd(a[i], primes[fid], prg[thread][cur_prg_pid[thread]]);
   }
 
   static void RandVec(Vec<ZZ_p>& a, int n, int fid = 0) {
     a.SetLength(n);
+    int thread = omp_get_thread_num();
     for (int i = 0; i < n; i++)
-      random(a[i]);
+      RandomZZ_p(a[i], prg[thread][cur_prg_pid[thread]]);
   }
 
   void RandMat(Mat<ZZ>& a, int nrows, int ncols, int fid) {
     a.SetDims(nrows, ncols);
+    int thread = omp_get_thread_num();
     for (int i = 0; i < nrows; i++)
       for (int j = 0; j < ncols; j++)
-        RandomBnd(a[i][j], primes[fid]);
+        RandomBnd(a[i][j], primes[fid], prg[thread][cur_prg_pid[thread]]);
   }
   
   static void RandMat(Mat<ZZ_p>& a, int nrows, int ncols, int fid = 0) {
     a.SetDims(nrows, ncols);
+    int thread = omp_get_thread_num();
     for (int i = 0; i < nrows; i++)
       for (int j = 0; j < ncols; j++)
-        random(a[i][j]);
+        RandomZZ_p(a[i][j], prg[thread][cur_prg_pid[thread]]);
   }
 
   static void RandMatBits(Mat<ZZ_p>& a, int nrows, int ncols, int bitlen) {
     a.SetDims(nrows, ncols);
+    int thread = omp_get_thread_num();
     for (int i = 0; i < nrows; i++)
       for (int j = 0; j < ncols; j++)
-        a[i][j] = conv<ZZ_p>(RandomBits_ZZ(bitlen));
+        a[i][j] = conv<ZZ_p>(RandomBits_ZZ(bitlen, prg[thread][cur_prg_pid[thread]]));
   }
   
   // a contains column indices (1-based) into cached tables
@@ -1392,7 +1404,7 @@ public:
 
 private:
   map<int, map<int, CSocket>> sockets; // key 1 is pid; key 2 is thread number
-  map<int, map<int, RandomStream>> prg; // key 1 is pid; key 2 is thread number
+  map<int, map<int, RandomStream>> prg; // key 1 is thread number; key 2 is pid
 
   /* Table lookup cache */
   Vec< Mat<ZZ_p> > table_cache;
@@ -1414,7 +1426,7 @@ private:
   map<int, Mat<ZZ_p> > pascal_cache_ZZp;
 
   int pid;
-  int cur_prg_pid;
+  map<int, int> cur_prg_pid; // keyed by thread number
   unsigned char *buf; // use this for single-threaded communication
   map<int, unsigned char*> buf_map; // use this for multi-threaded communication
   bool debug;
@@ -1625,7 +1637,7 @@ private:
     a.SetDims(nrows, ncols);
     for (int i = 0; i < nrows; i++)
       for (int j = 0; j < ncols; j++)
-        a[i][j] = RandomBits_ZZ(bitlen);
+        a[i][j] = RandomBits_ZZ(bitlen, prg[thread][cur_prg_pid[thread]]);
   }
 
   template<class T>
