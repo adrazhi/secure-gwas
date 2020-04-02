@@ -2401,7 +2401,7 @@ void MPCEnv::ExportSeed(fstream& ofs) {
   assert(ofs.is_open());
 
   int thread = omp_get_thread_num();
-  RandomStream rs = prg[thread][cur_prg_pid[thread]];
+  RandomStream rs = prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second;
   rs.serialize(buf);
 
   ofs.write((const char *)buf, RandomStream::numBytes());
