@@ -1351,7 +1351,7 @@ public:
 
   void RandElem(ZZ& a, int fid) {
     int thread = omp_get_thread_num();
-    RandomBnd(a, primes[fid], prg[thread][cur_prg_pid[thread]]);
+    RandomBnd(a, primes[fid], prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second);
   }
 
   void RandElem(ZZ_p& a, int fid = 0) {
