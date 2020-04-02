@@ -2049,7 +2049,7 @@ void RandomBits(ZZ& x, long l)
    RandomBits(x, l, stream);
 }
 
-void RandomBits(ZZ& x, long NumBits, RandomStream& stream)
+void RandomBits(ZZ& x, long l, RandomStream& stream)
 {
    if (l <= 0) {
       x = 0;
