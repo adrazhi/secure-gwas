@@ -36,8 +36,8 @@ void print_ntl_vec(const char* name, Vec<double> &vect, int num) {
 }
 
 int main(int argc, char** argv) {
-  if (argc < 5) {
-    cout << "Usage: ParallelTesting party_id param_file num_elements num_threads" << endl;
+  if (argc < 4) {
+    cout << "Usage: ParallelTesting party_id param_file num_elements" << endl;
     return 1;
   }
 
