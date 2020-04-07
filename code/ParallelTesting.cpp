@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
   bool print_output = false;
 
   int num_threads = 1;
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 5; i++) {
     Param::NUM_THREADS = num_threads;
     cout << "-----------------" << endl;
     cout << "Number of Threads: " << Param::NUM_THREADS << endl;
