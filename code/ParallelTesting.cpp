@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
 
   struct timeval start, end;
   double runtime;
-  bool print_output = true;
+  bool print_output = false;
 
   int num_threads = 1;
   for (int i = 0; i < 4; i++) {
