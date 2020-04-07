@@ -55,12 +55,7 @@ int main(int argc, char** argv) {
 
   string n_str(argv[3]);
   int n = stoi(n_str);
-  cout << "Number of elements in array: " << n << endl;
-  
-  string num_str(argv[4]);
-  int num_threads = stoi(num_str);
-  Param::NUM_THREADS = num_threads;
-  cout << "Number of threads: " << Param::NUM_THREADS << endl;
+  cout << "Number of elements in array: " << n << endl; 
 
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));
@@ -79,6 +74,8 @@ int main(int argc, char** argv) {
   Init(b, n);
   Init(c1, n);
   Init(c2, n);
+  Vec<double> c1_base;
+  Vec<double> c2_base;
 
   if (pid == 1) {
     // Reconstruct the random mask
@@ -121,41 +118,55 @@ int main(int argc, char** argv) {
 
   struct timeval start, end;
   double runtime;
+  bool print_output = true;
 
-  // Divide serially
-  gettimeofday(&start, NULL); 
-  ios_base::sync_with_stdio(false);
-  mpc.FPDiv(c1, a, b);
-  gettimeofday(&end, NULL);
-  mpc.RevealSym(c1);
+  int num_threads = 1;
+  for (int i = 0; i < 4; i++) {
+    Param::NUM_THREADS = num_threads;
+    cout << "-----------------" << endl;
+    cout << "Number of Threads: " << Param::NUM_THREADS << endl;
 
-  runtime = (end.tv_sec - start.tv_sec) * 1e6;
-  runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-  Vec<double> c1_base;
-  FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
-  
-  if (pid == 2) {
-    cout << "Runtime (serial): " << fixed << runtime << setprecision(6); 
-    cout << " sec" << endl;
-    print_ntl_vec("Division (serial)", c1_base, 5);
-  }
+    // Profile FPDivParallel
+    gettimeofday(&start, NULL); 
+    ios_base::sync_with_stdio(false);
+    mpc.FPDivParallel(c1, a, b);
+    gettimeofday(&end, NULL);
+    mpc.RevealSym(c1);
 
-  // Divide in parallel
-  gettimeofday(&start, NULL); 
-  ios_base::sync_with_stdio(false);
-  mpc.FPDivParallel(c2, a, b);
-  gettimeofday(&end, NULL);
-  mpc.RevealSym(c2);
+    // Print results
+    runtime = (end.tv_sec - start.tv_sec) * 1e6;
+    runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+    FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
+    if (pid == 2) {
+      cout << "Division Runtime: " << fixed << runtime << setprecision(6); 
+      cout << " sec" << endl;
+      if (print_output) print_ntl_vec("Division Result", c1_base, 5);
+      cout << endl;
+    }
 
-  runtime = (end.tv_sec - start.tv_sec) * 1e6;
-  runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-  Vec<double> c2_base;
-  FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
-  
-  if (pid == 2) {
-    cout << "Runtime (parallel): " << fixed << runtime << setprecision(6); 
-    cout << " sec" << endl;
-    print_ntl_vec("Division (parallel)", c2_base, 5);
+    // Profile FPSqrtParallel
+    gettimeofday(&start, NULL); 
+    ios_base::sync_with_stdio(false);
+    mpc.FPSqrtParallel(c1, c2, a);
+    gettimeofday(&end, NULL);
+    mpc.RevealSym(c1);
+    mpc.RevealSym(c2);
+
+    // Print results
+    runtime = (end.tv_sec - start.tv_sec) * 1e6;
+    runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+    FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
+    FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
+    if (pid == 2) {
+      cout << "Square Root Runtime: " << fixed << runtime << setprecision(6); 
+      cout << " sec" << endl;
+      if (print_output) {
+        print_ntl_vec("Square Root Result 1", c1_base, 5);
+        print_ntl_vec("Square Root Result 2", c2_base, 5);
+      }
+    }
+
+    num_threads *= 2;
   }
 
   mpc.CleanUp();

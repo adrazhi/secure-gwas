@@ -1544,6 +1544,42 @@ void MPCEnv::FPSqrt(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
   b = h_and_g[1][0];
 }
 
+// Assumes Param::NBIT_K - NBIT_F is even
+void MPCEnv::FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
+  int n = a.length();
+  int nbatch = Param::NUM_THREADS;
+  if (debug) cout << "FPSqrt with number of threads: " << nbatch << endl;
+  int batch_size = ceil(n / ((double) nbatch));
+  b.SetLength(n);
+  b_inv.SetLength(n);
+
+  #pragma omp parallel for num_threads(nbatch)
+  for (int i = 0; i < nbatch; i++) {
+    int start = batch_size * i;
+    int end = start + batch_size;
+    if (end > n) {
+      end = n;
+    }
+    int chunk_size = end - start;
+
+    // avoid error by re-setting the modulus
+    ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+    ZZ_p::init(base_p);
+
+    Vec<ZZ_p> a_copy;
+    a_copy.SetLength(chunk_size);
+    for (int j = 0; j < chunk_size; j++) {
+      a_copy[j] = a[start + j];
+    }
+    Vec<ZZ_p> b_copy, b_inv_copy;
+    FPSqrt(b_copy, b_inv_copy, a_copy);
+    for (int j = 0; j < chunk_size; j++) {
+      b[start + j] = b_copy[j];
+      b_inv[start + j] = b_inv_copy[j];
+    }
+  }
+}
+
 void MPCEnv::FPDiv(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   if (debug) cout << "FPDiv: " << a.length() << endl; 
 
@@ -1666,7 +1702,7 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
 
   int n = a.length();
   int nbatch = Param::NUM_THREADS;
-  cout << "FPDiv with number of threads: " << nbatch << endl;
+  if (debug) cout << "FPDiv with number of threads: " << nbatch << endl;
   int batch_size = ceil(n / ((double) nbatch));
   c.SetLength(n);
 
