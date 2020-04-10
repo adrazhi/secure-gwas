@@ -2448,14 +2448,13 @@ void MPCEnv::ImportSeed(int newid, ifstream& ifs) {
 
   ifs.read((char *)buf, RandomStream::numBytes());
 
-  for (map<int, map<int, RandomStream>>::iterator it1 = prg.begin(); it1 != prg.end(); ++it1) {
-    RandomStream rs((const unsigned char *)buf, true);
+  RandomStream rs((const unsigned char *)buf, true);
 
-    pair<map<int, RandomStream>::iterator, bool> ret;
-    ret = it1->second.insert(pair<int, RandomStream>(newid, rs));
-    if (!ret.second) { // ID exists already
-      ret.first->second = rs;
-    }
+  int thread = omp_get_thread_num();
+  pair<map<int,RandomStream>::iterator,bool> ret;
+  ret = prg.find(thread)->second.insert(pair<int, RandomStream>(newid, rs));
+  if (!ret.second) { // ID exists already
+    ret.first->second = rs;
   }
 }
 

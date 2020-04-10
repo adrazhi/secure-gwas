@@ -583,6 +583,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   long rolling_n0;
   long sub_n0;
 
+  int num_datasets = Param::NUM_INDS.size();
+  int dataset_threads = std::min(Param::NUM_THREADS, num_datasets);
+
   mpc.ProfilerPushState("main");
 
   // Read in SNP list
@@ -614,9 +617,13 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   Mat<ZZ_p> cov;
   Init(cov, n0, Param::NUM_COVS);
 
-  rolling_n0 = 0;
-  for (int i = 0; i < Param::NUM_INDS.size(); i++) {
-    sub_n0 = Param::NUM_INDS[i];
+  #pragma omp parallel for num_threads(dataset_threads)
+  for (int i = 0; i < num_datasets; i++) {
+    long offset = 0;
+    for (int j = 0; j < i; j++) {
+      offset += Param::NUM_INDS[j];
+    }
+    long inner_n0 = Param::NUM_INDS[i];
   
     if (!exists(cache(pid, i, "input_geno")) || !exists(cache(pid, i, "input_pheno_cov"))) {
       cout << "Initial data sharing results not found:" << endl;
@@ -627,25 +634,24 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     cout << "Initial data sharing results found" << endl;
 
-    ifs.open(cache(pid, i, "input_pheno_cov").c_str(), ios::binary);
+    ifstream inner_ifs;
+    inner_ifs.open(cache(pid, i, "input_pheno_cov").c_str(), ios::binary);
 
     Vec<ZZ_p> sub_pheno;
-    Init(sub_pheno, sub_n0);
-    mpc.ReadFromFile(sub_pheno, ifs, sub_n0);
-    for (int j = 0; j < sub_n0; j++) {
-      pheno[rolling_n0 + j] = sub_pheno[j];
+    Init(sub_pheno, inner_n0);
+    mpc.ReadFromFile(sub_pheno, inner_ifs, inner_n0);
+    for (int j = 0; j < inner_n0; j++) {
+      pheno[offset + j] = inner_pheno[j];
     }
 
     Mat<ZZ_p> sub_cov;
-    Init(sub_cov, sub_n0, Param::NUM_COVS);
-    mpc.ReadFromFile(sub_cov, ifs, sub_n0, Param::NUM_COVS);
-    for (int j = 0; j < sub_n0; j++) {
-      cov[rolling_n0 + j] = sub_cov[j];
+    Init(sub_cov, inner_n0, Param::NUM_COVS);
+    mpc.ReadFromFile(sub_cov, inner_ifs, inner_n0, Param::NUM_COVS);
+    for (int j = 0; j < inner_n0; j++) {
+      cov[offset + j] = sub_cov[j];
     }
 
-    rolling_n0 += sub_n0;
-
-    ifs.close();
+    inner_ifs.close();
   }
 
   cout << "Phenotypes and covariates loaded" << endl;
@@ -714,17 +720,19 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
         if (pid > 0) {
           // Loop over all datasets to calculate missing rate across all individuals
-          for (int i = 0; i < Param::NUM_INDS.size(); i++) {
-            sub_n0 = Param::NUM_INDS[i];
+          #pragma omp parallel for num_threads(dataset_threads)
+          for (int i = 0; i < num_datasets; i++) {
+            long inner_n0 = Param::NUM_INDS[i];
 
-            ifs.open(cache(pid, i, "input_geno").c_str(), ios::binary);
+            ifstream inner_ifs;
+            inner_ifs.open(cache(pid, i, "input_geno").c_str(), ios::binary);
 
             mpc.ImportSeed(10, ifs);
 
-            long bsize = sub_n0 / 10;
+            long bsize = inner_n0 / 10;
 
             tic();
-            for (int j = 0; j < sub_n0; j++) {
+            for (int j = 0; j < inner_n0; j++) {
               Vec<ZZ_p> miss, miss_mask;
 
               // Load stored Beaver partition
@@ -748,12 +756,12 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
               // Add to running sum
               gmiss += miss;
 
-              if ((j + 1) % bsize == 0 || j == sub_n0 - 1) {
-                cout << "\t" << j+1 << " / " << sub_n0 << ", "; toc(); tic();
+              if ((j + 1) % bsize == 0 || j == inner_n0 - 1) {
+                cout << "\t" << j+1 << " / " << inner_n0 << ", "; toc(); tic();
               }
             }
 
-            ifs.close();
+            inner_ifs.close();
           }
         }
 
@@ -1274,8 +1282,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     ifs.close();
   } else {
     mpc.ProfilerPushState("div");
-    mpc.FPDiv(maf, dosage_sum, dosage_tot); 
-    mpc.FPDiv(maf_ctrl, dosage_sum_ctrl, dosage_tot_ctrl); 
+    mpc.FPDivParallel(maf, dosage_sum, dosage_tot); 
+    mpc.FPDivParallel(maf_ctrl, dosage_sum_ctrl, dosage_tot_ctrl); 
     mpc.ProfilerPopState(false); // div
 
     fs.open(cache(pid, "maf").c_str(), ios::out | ios::binary);
@@ -1400,7 +1408,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           mpc.Trunc(diff);
 
           mpc.ProfilerPushState("div");
-          mpc.FPDiv(tmp_vec, diff, g_exp_ctrl[i]);
+          mpc.FPDivParallel(tmp_vec, diff, g_exp_ctrl[i]);
           mpc.ProfilerPopState(false); // div
           hwe_chisq += tmp_vec;
 
@@ -1473,7 +1481,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     cout << "Calculating genotype standard deviations (inverse)" << endl;
 
     mpc.ProfilerPushState("sqrt");
-    mpc.FPSqrt(tmp_vec, g_std_bern_inv, g_var_bern);
+    mpc.FPSqrtParallel(tmp_vec, g_std_bern_inv, g_var_bern);
     mpc.ProfilerPopState(false); // sqrt
 
     fs.open(cache(pid, "stdinv_bern").c_str(), ios::out | ios::binary);
@@ -2559,7 +2567,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     ifs.close();
   } else {
     mpc.ProfilerPushState("sqrt");
-    mpc.FPSqrt(tmp_vec, denom1_sqrt_inv, denom);
+    mpc.FPSqrtParallel(tmp_vec, denom1_sqrt_inv, denom);
     mpc.ProfilerPopState(false); // sqrt
 
     fs.open(cache(pid, "denom_inv").c_str(), ios::out | ios::binary);
