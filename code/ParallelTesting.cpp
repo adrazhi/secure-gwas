@@ -129,6 +129,7 @@ int main(int argc, char** argv) {
     // Profile Data Transfer
     int sub_n = n / num_threads;
     Mat<ZZ_p> X;
+    Init(X, num_threads, sub_n);
     if (pid == 2) {
       mpc.RandMat(X, num_threads, sub_n);
       gettimeofday(&start, NULL); 
