@@ -125,23 +125,23 @@ int main(int argc, char** argv) {
   bool fpsqrt = true;
   bool print_output = false;
 
-  int num_threads = 1;
-  for (int i = 0; i < 5; i++) {
-    Param::NUM_THREADS = num_threads;
+  vector<int> num_threads{ 1, 2, 4, 6, 8, 10, 16 };
+  for (int i = 0; i < num_threads.size(); i++) {
+    Param::NUM_THREADS = num_threads[i];
     cout << "-----------------" << endl;
     cout << "Number of Threads: " << Param::NUM_THREADS << endl;
 
     // Profile Data Transfer
     if (data_transfer) {
-      int sub_n = n / num_threads;
+      int sub_n = n / num_threads[i];
       Mat<ZZ_p> X;
-      Init(X, num_threads, sub_n);
+      Init(X, num_threads[i], sub_n);
       if (pid == 2) {
-        mpc.RandMat(X, num_threads, sub_n);
+        mpc.RandMat(X, num_threads[i], sub_n);
         gettimeofday(&start, NULL); 
         ios_base::sync_with_stdio(false);
-        #pragma omp parallel for num_threads(num_threads) 
-        for (int j = 0; j < num_threads; j++) {
+        #pragma omp parallel for num_threads(num_threads[i]) 
+        for (int j = 0; j < num_threads[i]; j++) {
           mpc.SendVec(X[j], 0);
         }
         gettimeofday(&end, NULL);
@@ -151,8 +151,8 @@ int main(int argc, char** argv) {
         cout << "Data Transfer Runtime: " << fixed << runtime << setprecision(6); 
         cout << " sec" << endl;
       } else if (pid == 0) {
-        #pragma omp parallel for num_threads(num_threads) 
-        for (int j = 0; j < num_threads; j++) {
+        #pragma omp parallel for num_threads(num_threads[i]) 
+        for (int j = 0; j < num_threads[i]; j++) {
           mpc.ReceiveVec(X[j], 2, sub_n);
         }
       }
@@ -201,8 +201,6 @@ int main(int argc, char** argv) {
         }
       }
     }
-
-    num_threads *= 2;
   }
 
   mpc.CleanUp();
