@@ -128,9 +128,9 @@ int main(int argc, char** argv) {
 
     // Profile Data Transfer
     int sub_n = n / num_threads;
+    Mat<ZZ_p> X;
     if (pid == 2) {
-      Mat<ZZ_p> X;
-      RandMat(X, num_threads, sub_n);
+      mpc.RandMat(X, num_threads, sub_n);
       gettimeofday(&start, NULL); 
       ios_base::sync_with_stdio(false);
       #pragma omp parallel for num_threads(num_threads) 
