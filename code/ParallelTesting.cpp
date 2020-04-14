@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
 
   struct timeval start, end;
   double runtime;
-  bool print_output = false;
+  bool print_output = true;
 
   int num_threads = 1;
   for (int i = 0; i < 5; i++) {
@@ -151,45 +151,45 @@ int main(int argc, char** argv) {
       }
     }
 
-    // // Profile FPDivParallel
-    // gettimeofday(&start, NULL); 
-    // ios_base::sync_with_stdio(false);
-    // mpc.FPDivParallel(c1, a, b);
-    // gettimeofday(&end, NULL);
-    // mpc.RevealSym(c1);
+    // Profile FPDivParallel
+    gettimeofday(&start, NULL); 
+    ios_base::sync_with_stdio(false);
+    mpc.FPDivParallel(c1, a, b);
+    gettimeofday(&end, NULL);
+    mpc.RevealSym(c1);
 
-    // // Print results
-    // runtime = (end.tv_sec - start.tv_sec) * 1e6;
-    // runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-    // FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
-    // if (pid == 2) {
-    //   cout << "Division Runtime: " << fixed << runtime << setprecision(6); 
-    //   cout << " sec" << endl;
-    //   if (print_output) print_ntl_vec("Division Result", c1_base, 5);
-    //   cout << endl;
-    // }
+    // Print results
+    runtime = (end.tv_sec - start.tv_sec) * 1e6;
+    runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+    FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
+    if (pid == 2) {
+      cout << "Division Runtime: " << fixed << runtime << setprecision(6); 
+      cout << " sec" << endl;
+      if (print_output) print_ntl_vec("Division Result", c1_base, 5);
+      cout << endl;
+    }
 
-    // // Profile FPSqrtParallel
-    // gettimeofday(&start, NULL); 
-    // ios_base::sync_with_stdio(false);
-    // mpc.FPSqrtParallel(c1, c2, a);
-    // gettimeofday(&end, NULL);
-    // mpc.RevealSym(c1);
-    // mpc.RevealSym(c2);
+    // Profile FPSqrtParallel
+    gettimeofday(&start, NULL); 
+    ios_base::sync_with_stdio(false);
+    mpc.FPSqrtParallel(c1, c2, a);
+    gettimeofday(&end, NULL);
+    mpc.RevealSym(c1);
+    mpc.RevealSym(c2);
 
-    // // Print results
-    // runtime = (end.tv_sec - start.tv_sec) * 1e6;
-    // runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-    // FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
-    // FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
-    // if (pid == 2) {
-    //   cout << "Square Root Runtime: " << fixed << runtime << setprecision(6); 
-    //   cout << " sec" << endl;
-    //   if (print_output) {
-    //     print_ntl_vec("Square Root Result 1", c1_base, 5);
-    //     print_ntl_vec("Square Root Result 2", c2_base, 5);
-    //   }
-    // }
+    // Print results
+    runtime = (end.tv_sec - start.tv_sec) * 1e6;
+    runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+    FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
+    FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
+    if (pid == 2) {
+      cout << "Square Root Runtime: " << fixed << runtime << setprecision(6); 
+      cout << " sec" << endl;
+      if (print_output) {
+        print_ntl_vec("Square Root Result 1", c1_base, 5);
+        print_ntl_vec("Square Root Result 2", c2_base, 5);
+      }
+    }
 
     num_threads *= 2;
   }
