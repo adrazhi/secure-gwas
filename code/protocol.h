@@ -584,7 +584,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   long sub_n0;
 
   int num_datasets = Param::NUM_INDS.size();
-  int dataset_threads = std::min(Param::NUM_THREADS, num_datasets);
+  int dataset_threads = (Param::NUM_THREADS < num_datasets) ? Param::NUM_THREADS : num_datasets;
 
   mpc.ProfilerPushState("main");
 
@@ -617,6 +617,17 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   Mat<ZZ_p> cov;
   Init(cov, n0, Param::NUM_COVS);
 
+  for (int i = 0; i < num_datasets; i++) {
+    if (!exists(cache(pid, i, "input_geno")) || !exists(cache(pid, i, "input_pheno_cov"))) {
+      cout << "Initial data sharing results not found:" << endl;
+      cout << "\t" << cache(pid, i, "input_geno") << endl;
+      cout << "\t" << cache(pid, i, "input_pheno_cov") << endl;
+      return false;
+    }
+  }
+
+  cout << "Initial data sharing results found" << endl;
+
   #pragma omp parallel for num_threads(dataset_threads)
   for (int i = 0; i < num_datasets; i++) {
     long offset = 0;
@@ -624,15 +635,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       offset += Param::NUM_INDS[j];
     }
     long inner_n0 = Param::NUM_INDS[i];
-  
-    if (!exists(cache(pid, i, "input_geno")) || !exists(cache(pid, i, "input_pheno_cov"))) {
-      cout << "Initial data sharing results not found:" << endl;
-      cout << "\t" << cache(pid, i, "input_geno") << endl;
-      cout << "\t" << cache(pid, i, "input_pheno_cov") << endl;
-      return false;
-    }
-
-    cout << "Initial data sharing results found" << endl;
 
     ifstream inner_ifs;
     inner_ifs.open(cache(pid, i, "input_pheno_cov").c_str(), ios::binary);
@@ -641,7 +643,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     Init(sub_pheno, inner_n0);
     mpc.ReadFromFile(sub_pheno, inner_ifs, inner_n0);
     for (int j = 0; j < inner_n0; j++) {
-      pheno[offset + j] = inner_pheno[j];
+      pheno[offset + j] = sub_pheno[j];
     }
 
     Mat<ZZ_p> sub_cov;
