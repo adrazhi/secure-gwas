@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
   bool data_transfer = false;
   bool fpdiv = true;
   bool fpsqrt = true;
-  bool print_output = true;
+  bool print_output = false;
 
   int num_threads = 1;
   for (int i = 0; i < 5; i++) {
