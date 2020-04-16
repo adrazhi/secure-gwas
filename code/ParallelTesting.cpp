@@ -52,6 +52,7 @@ int main(int argc, char** argv) {
     cout << "Could not finish parsing parameter file" << endl;
     return 1;
   }
+  Param::NUM_THREADS = 64;
 
   string n_str(argv[3]);
   int n = stoi(n_str);
