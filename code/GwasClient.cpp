@@ -10,6 +10,7 @@
 #include <map>
 #include <iostream>
 #include <sstream>
+#include <sys/time.h>
 
 using namespace NTL;
 using namespace std;
@@ -54,7 +55,17 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  struct timeval start, end;
+  double runtime;
+
+  gettimeofday(&start, NULL); 
+  ios_base::sync_with_stdio(false);
   bool success = gwas_protocol(mpc, pid);
+  gettimeofday(&end, NULL);
+
+  // calculate runtime in seconds
+  runtime = (end.tv_sec - start.tv_sec) * 1e6;
+  runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
 
   // This is here just to keep P0 online until the end for data transfer
   // In practice, P0 would send data in advance before each phase and go offline
@@ -68,6 +79,8 @@ int main(int argc, char** argv) {
 
   if (success) {
     cout << "Protocol successfully completed" << endl;
+    cout << "GWAS Runtime: " << fixed << runtime << setprecision(6); 
+    cout << " sec" << endl;
     return 0;
   } else {
     cout << "Protocol abnormally terminated" << endl;
