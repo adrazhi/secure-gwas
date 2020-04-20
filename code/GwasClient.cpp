@@ -10,6 +10,7 @@
 #include <map>
 #include <iostream>
 #include <sstream>
+#include <bits/stdc++.h>
 #include <sys/time.h>
 
 using namespace NTL;
