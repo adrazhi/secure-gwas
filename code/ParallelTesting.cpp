@@ -52,10 +52,10 @@ int main(int argc, char** argv) {
     cout << "Could not finish parsing parameter file" << endl;
     return 1;
   }
-  Param::NUM_THREADS = 64;
+  Param::NUM_THREADS = 16;
 
   string n_str(argv[3]);
-  int n = stoi(n_str);
+  long n = stoi(n_str);
   cout << "Number of elements in array: " << n << endl; 
 
   vector< pair<int, int> > pairs;
