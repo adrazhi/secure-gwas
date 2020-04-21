@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
   bool fpsqrt = false;
   bool print_output = false;
 
-  vector<int> num_threads{ 8, 16 };
+  vector<int> num_threads{ 16 };
   for (int i = 0; i < num_threads.size(); i++) {
     Param::NUM_THREADS = num_threads[i];
     cout << "-----------------" << endl;
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
         ios_base::sync_with_stdio(false);
         #pragma omp parallel for num_threads(num_threads[i]) 
         for (int j = 0; j < num_threads[i]; j++) {
-          string output = "Iter " + to_string(i) + ", Thread " + to_string(omp_get_thread_num()) + "\n";
+          string output = "Iter " + to_string(j) + ", Thread " + to_string(omp_get_thread_num()) + "\n";
           cout << output;
           mpc.SendVec(X[j], 0);
         }
