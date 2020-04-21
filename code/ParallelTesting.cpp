@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
   bool fpsqrt = false;
   bool print_output = false;
 
-  vector<int> num_threads{ 16 };
+  vector<int> num_threads{ 8, 16 };
   for (int i = 0; i < num_threads.size(); i++) {
     Param::NUM_THREADS = num_threads[i];
     cout << "-----------------" << endl;
