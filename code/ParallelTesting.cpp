@@ -58,14 +58,14 @@ int main(int argc, char** argv) {
   int n = stoi(n_str);
   cout << "Number of elements in array: " << n << endl; 
 
-  #pragma omp parallel for num_threads(10)
-  for (int i = 0; i < 10; i++) {
-    string output = "Iter " + to_string(i) + ", Thread " + to_string(omp_get_thread_num()) + "\n";
-    cout << output;
-    for (long j = 0; j < 100000000000; j++) {
-      int k = i * i * i;
+  #pragma omp parallel for num_threads(3)
+  for (int j = 0; j < 3; j++) {
+    #pragma omp parallel for num_threads(10)
+    for (int i = 0; i < 10; i++) {
+      string output = "Iter " + to_string(i) + ", Thread " + to_string(omp_get_thread_num()) + "\n";
+      cout << output;
     }
-  } 
+  }
 
   // vector< pair<int, int> > pairs;
   // pairs.push_back(make_pair(0, 1));
