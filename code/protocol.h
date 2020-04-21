@@ -485,6 +485,10 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid, int n, int chunk_id) {
 
   fstream fs;
 
+  // avoid error by re-setting the modulus within each thread
+  ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+  ZZ_p::init(base_p);
+
   Vec<ZZ_p> pheno;
   Init(pheno, n);
 
