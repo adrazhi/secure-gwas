@@ -232,7 +232,7 @@ int main(int argc, char** argv) {
   // divide up the dataset into chunks
   long total_lines = Param::NUM_INDS[Param::CUR_ROUND];
   long chunk_size =  total_lines / Param::NUM_THREADS;
-    
+
   bool success = true;
   if (pid < 3) {
     #pragma omp parallel for num_threads(Param::NUM_THREADS)
@@ -245,10 +245,7 @@ int main(int argc, char** argv) {
       long num_lines = end_line - start_line;
 
       bool inner_success = data_sharing_protocol(mpc, pid, num_lines, i);
-      if (!inner_success) {
-        success = false;
-        break;
-      }
+      if (!inner_success) success = false;
     }
   } else {
     #pragma omp parallel for num_threads(Param::NUM_THREADS)
@@ -267,9 +264,10 @@ int main(int argc, char** argv) {
         bool inner_success = send_stream(data_dir, mpc, signal, start_line, num_lines);
         if (!inner_success) {
           success = false;
-          break;
+          signal = GwasIterator::TERM_CODE;
+        } else {
+          signal = mpc.ReceiveInt(1);
         }
-        signal = mpc.ReceiveInt(1);
       }
     }
 
