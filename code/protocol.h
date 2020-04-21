@@ -476,6 +476,7 @@ bool logireg_protocol(MPCEnv& mpc, int pid) {
 
 bool data_sharing_protocol(MPCEnv& mpc, int pid) {
   int n = Param::NUM_INDS[Param::CUR_ROUND];
+  cout << "n: " << n << endl;
 
   fstream fs;
 
@@ -736,10 +737,11 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
             tic();
             for (int j = 0; j < inner_n0; j++) {
               Vec<ZZ_p> miss, miss_mask;
+              Mat<ZZ_p> skip_mat;
 
               // Load stored Beaver partition
               mpc.SwitchSeed(10);
-              mpc.RandMat(tmp_mat, 3, m0); // g_mask
+              mpc.RandMat(skip_mat, 3, m0); // g_mask
               mpc.RandVec(miss_mask, m0);
               mpc.RestoreSeed();
 
@@ -756,7 +758,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
               }
 
               // Add to running sum
-              gmiss += miss;
+              gmiss += miss; // To Do: need to make this threadsafe
 
               if ((j + 1) % bsize == 0 || j == inner_n0 - 1) {
                 cout << "\t" << j+1 << " / " << inner_n0 << ", "; toc(); tic();
@@ -806,6 +808,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   uint m1 = conv<uint>(Sum(gkeep1));
   cout << "n0: " << n0 << ", " << "m1: " << m1 << endl;
+
+  // To Do: Continue parallelizing from here
 
   cout << "Filtering SNP position vector" << endl;
   FilterVec(snp_pos, gkeep1);
