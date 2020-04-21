@@ -232,8 +232,10 @@ int main(int argc, char** argv) {
   }
 
   // divide up the dataset into chunks
+  int num_chunks = Param::NUM_THREADS;
   long total_lines = Param::NUM_INDS[Param::CUR_ROUND];
-  long chunk_size =  total_lines / Param::NUM_THREADS;
+  long chunk_size = ceil(total_lines / ((double) num_chunks));
+  num_chunks = ceil(n / ((double) chunk_size));
 
   // profile runtime for end to end data sharing
   struct timeval start, end;
@@ -243,7 +245,7 @@ int main(int argc, char** argv) {
   ios_base::sync_with_stdio(false);
   bool success = true;
   if (pid < 3) {
-    #pragma omp parallel for num_threads(Param::NUM_THREADS)
+    #pragma omp parallel for num_threads(num_chunks)
     for (int i = 0; i < Param::NUM_THREADS; i++) {
       long start_line = chunk_size * i;
       long end_line = start_line + chunk_size;
@@ -260,7 +262,7 @@ int main(int argc, char** argv) {
       if (!inner_success) success = false;
     }
   } else {
-    #pragma omp parallel for num_threads(Param::NUM_THREADS)
+    #pragma omp parallel for num_threads(num_chunks)
     for (int i = 0; i < Param::NUM_THREADS; i++) {
       long start_line = chunk_size * i;
       long end_line = start_line + chunk_size;
