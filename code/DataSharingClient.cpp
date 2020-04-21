@@ -209,12 +209,16 @@ int main(int argc, char** argv) {
 
   while (lineno < start_line) {
     getline(fin_geno, line);
+    if (lineno % 10 == 0) {
+      cout << lineno << endl;
+    }
+    lineno++;
   }
   getline(fin_geno, line);
   istringstream iss_geno(line);
   long val;
   iss_geno >> val;
-  print(val);
+  cout << val << endl;
 
 
   // vector< pair<int, int> > pairs;
