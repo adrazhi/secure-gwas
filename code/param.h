@@ -78,6 +78,8 @@ class Param {
     static long PITER_BATCH_SIZE; // size of batch processing of genomes
     static long PAR_THRES; // minimum threshold for thread-boosting
     static long NUM_THREADS; // number of threads for thread-boosting
+    static bool CHUNK_MODE; // represents whether we want to share each data set chunkwise (in parallel)
+    static vector<long> NUM_CHUNKS; // number of chunks per dataset for chunked data-sharing
 
     /* Global control */
     static bool SKIP_QC; // skip quality control and use all individuals/SNPs

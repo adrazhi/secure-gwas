@@ -14,7 +14,7 @@
 using namespace NTL;
 using namespace std;
 
-bool send_stream(string data_dir, MPCEnv& mpc, int mode) {
+bool send_stream(string data_dir, MPCEnv& mpc, int mode, long start_line, long num_lines) {
   string geno_file = data_dir + "geno.txt";
   string pheno_file = data_dir + "pheno.txt";
   string cov_file = data_dir + "cov.txt";
@@ -174,8 +174,15 @@ int main(int argc, char** argv) {
   string round_str(argv[3]);
   Param::Convert(round_str, Param::CUR_ROUND, "CUR_ROUND");
 
-  // Data Sharing Code should not be multi-threaded
-  Param::NUM_THREADS = 1;
+  // If not in chunked mode, Data Sharing code should not be multi-threaded
+  // Otherwise, set the number of threads to be the number of chunks
+  if (!Param::CHUNK_MODE) {
+    Param::NUM_THREADS = 1;
+  } else {
+    if (Param::NUM_CHUNKS[Param::CUR_ROUND] < Param::NUM_THREADS) {
+      Param::NUM_THREADS = Param::NUM_CHUNKS[Param::CUR_ROUND];
+    }
+  }
 
   string data_dir;
   if (pid == 3) {
@@ -192,47 +199,65 @@ int main(int argc, char** argv) {
     cout << "Data directory: " << data_dir << endl;
   }
 
-  vector< pair<int, int> > pairs;
-  pairs.push_back(make_pair(0, 1));
-  pairs.push_back(make_pair(0, 2));
-  pairs.push_back(make_pair(1, 2));
-  pairs.push_back(make_pair(1, 3));
-  pairs.push_back(make_pair(2, 3));
+  bool success = true;
+  string geno_file = data_dir + "geno.txt";
+  ifstream fin_geno(geno_file.c_str());
+  
+  int start_line = 7000;
+  uint32_t lineno = 0;
+  string line;
 
-  /* Initialize MPC environment */
-  MPCEnv mpc;
-  if (!mpc.Initialize(pid, pairs)) {
-    cout << "MPC environment initialization failed" << endl;
-    return 1;
+  while (lineno < start_line) {
+    getline(fin_geno, line);
   }
+  getline(fin_geno, line);
+  istringstream iss_geno(line);
+  long val;
+  iss_geno >> val;
+  print(val);
 
-  bool success;
-  if (pid < 3) {
-    success = data_sharing_protocol(mpc, pid);
-  } else {
-    /* Stream data upon request */
-    int signal = mpc.ReceiveInt(1);
 
-    while (signal != GwasIterator::TERM_CODE) {
-      success = send_stream(data_dir, mpc, signal);
-      if (!success) break;
+  // vector< pair<int, int> > pairs;
+  // pairs.push_back(make_pair(0, 1));
+  // pairs.push_back(make_pair(0, 2));
+  // pairs.push_back(make_pair(1, 2));
+  // pairs.push_back(make_pair(1, 3));
+  // pairs.push_back(make_pair(2, 3));
 
-      signal = mpc.ReceiveInt(1);
-    }
+  // /* Initialize MPC environment */
+  // MPCEnv mpc;
+  // if (!mpc.Initialize(pid, pairs)) {
+  //   cout << "MPC environment initialization failed" << endl;
+  //   return 1;
+  // }
 
-    cout << "Done with streaming data" << endl;
-    success = true;
-  }
+  // bool success;
+  // if (pid < 3) {
+  //   success = data_sharing_protocol(mpc, pid);
+  // } else {
+  //   /* Stream data upon request */
+  //   int signal = mpc.ReceiveInt(1);
 
-  // This is here just to keep P0 online until the end for data transfer
-  // In practice, P0 would send data in advance before each phase and go offline
-  if (pid == 0) {
-    mpc.ReceiveBool(2);
-  } else if (pid == 2) {
-    mpc.SendBool(true, 0);
-  }
+  //   while (signal != GwasIterator::TERM_CODE) {
+  //     success = send_stream(data_dir, mpc, signal);
+  //     if (!success) break;
 
-  mpc.CleanUp();
+  //     signal = mpc.ReceiveInt(1);
+  //   }
+
+  //   cout << "Done with streaming data" << endl;
+  //   success = true;
+  // }
+
+  // // This is here just to keep P0 online until the end for data transfer
+  // // In practice, P0 would send data in advance before each phase and go offline
+  // if (pid == 0) {
+  //   mpc.ReceiveBool(2);
+  // } else if (pid == 2) {
+  //   mpc.SendBool(true, 0);
+  // }
+
+  // mpc.CleanUp();
 
   if (success) {
     cout << "Protocol successfully completed" << endl;

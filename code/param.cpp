@@ -91,6 +91,10 @@ bool Param::ParseFile(const char *param_file) {
       ret = Convert(v, Param::PAR_THRES, k);
     } else if (k == "NUM_THREADS") {
       ret = Convert(v, Param::NUM_THREADS, k);
+    } else if (k == "CHUNK_MODE") {
+      ret = Convert(v, Param::CHUNK_MODE, k);
+    } else if (k == "NUM_CHUNKS") {
+      ret = ConvertVector(v, Param::NUM_CHUNKS, k);
     } else if (k == "MPC_BUF_SIZE") {
       ret = Convert(v, Param::MPC_BUF_SIZE, k);
     } else if (k == "ITER_PER_EVAL") {
@@ -202,6 +206,8 @@ long Param::NUM_COVS = 10;
 long Param::PITER_BATCH_SIZE = 100;
 long Param::PAR_THRES = 50;
 long Param::NUM_THREADS = 20;
+bool Param::CHUNK_MODE = false;
+vector<string> Param::NUM_CHUNKS;
 
 bool Param::SKIP_QC = false;
 bool Param::PROFILER = true;
