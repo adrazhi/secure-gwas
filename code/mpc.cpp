@@ -1567,6 +1567,9 @@ void MPCEnv::FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
     }
     int chunk_size = end - start;
 
+    string output = "Iter " + to_string(i) + ", Thread " + to_string(omp_get_thread_num()) + "\n";
+    cout << output;
+
     // avoid error by re-setting the modulus
     ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
     ZZ_p::init(base_p);
@@ -1725,8 +1728,8 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
     }
     int chunk_size = end - start;
 
-    // int threadnum = omp_get_thread_num();
-    // cout << "Iter " << i << " , Thread " << threadnum << endl;
+    string output = "Iter " + to_string(i) + ", Thread " + to_string(omp_get_thread_num()) + "\n";
+    cout << output;
 
     // avoid error by re-setting the modulus
     ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
