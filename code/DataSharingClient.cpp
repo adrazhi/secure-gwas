@@ -11,6 +11,8 @@
 #include <iostream>
 #include <sstream>
 #include <omp.h>
+#include <bits/stdc++.h>
+#include <sys/time.h>
 
 using namespace NTL;
 using namespace std;
@@ -233,6 +235,12 @@ int main(int argc, char** argv) {
   long total_lines = Param::NUM_INDS[Param::CUR_ROUND];
   long chunk_size =  total_lines / Param::NUM_THREADS;
 
+  // profile runtime for end to end data sharing
+  struct timeval start, end;
+  double runtime;
+
+  gettimeofday(&start, NULL); 
+  ios_base::sync_with_stdio(false);
   bool success = true;
   if (pid < 3) {
     #pragma omp parallel for num_threads(Param::NUM_THREADS)
@@ -243,6 +251,10 @@ int main(int argc, char** argv) {
         end_line = total_lines;
       }
       long num_lines = end_line - start_line;
+
+      // avoid error by re-setting the modulus within each thread
+      ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+      ZZ_p::init(base_p);
 
       bool inner_success = data_sharing_protocol(mpc, pid, num_lines, i);
       if (!inner_success) success = false;
@@ -256,6 +268,10 @@ int main(int argc, char** argv) {
         end_line = total_lines;
       }
       long num_lines = end_line - start_line;
+
+      // avoid error by re-setting the modulus within each thread
+      ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+      ZZ_p::init(base_p);
 
       /* Stream data upon request */
       int signal = mpc.ReceiveInt(1);
@@ -273,6 +289,11 @@ int main(int argc, char** argv) {
 
     cout << "Done with streaming data" << endl;
   }
+  gettimeofday(&end, NULL);
+
+  // calculate runtime in seconds
+  runtime = (end.tv_sec - start.tv_sec) * 1e6;
+  runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
 
   // This is here just to keep P0 online until the end for data transfer
   // In practice, P0 would send data in advance before each phase and go offline
@@ -286,6 +307,8 @@ int main(int argc, char** argv) {
 
   if (success) {
     cout << "Protocol successfully completed" << endl;
+    cout << "Data Sharing Runtime: " << fixed << runtime << setprecision(6); 
+    cout << " sec" << endl;
     return 0;
   } else {
     cout << "Protocol abnormally terminated" << endl;
