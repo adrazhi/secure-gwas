@@ -16,6 +16,14 @@
 using namespace NTL;
 using namespace std;
 
+void print_vec(const char* name, vector<double> &vect, int num) {
+  cout << name << ": ";
+  for (int i = 0; i < num; i++) {
+    cout << vect[i] << "  ";
+  }
+  cout << endl;
+}
+
 int main(int argc, char** argv) {
   if (argc < 3) {
     cout << "Usage: GwasClient party_id param_file" << endl;
@@ -37,11 +45,39 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  // pre-process the param before running GWAS
+  int n = Param::NUM_INDS.size();
+  for (int i = 0; i < n; i++) {
+    int num_chunks = Param::NUM_CHUNKS[i];
+
+    // expand out the numbers of individuals
+    long total = Param::NUM_INDS[i];
+    long chunk_size = ceil(total / ((double) num_chunks));
+    num_chunks = ceil(total / ((double) chunk_size)); 
+    long remainder = total - ((num_chunks - 1) * chunk_size);
+    for (int j = 0; j < num_chunks - 1; j++) {
+      Param::NUM_INDS.push_back(chunk_size);
+    }
+    Param::NUM_INDS.push_back(remainder);
+
+    // expand out the cache file prefixes
+    for (int j = 0; j < num_chunks; j++) {
+      Param::CACHE_FILE_PREFIX.push_back(Param::CACHE_FILE_PREFIX[i] + "_" + to_string(j));
+    }
+  }
+  for (int i = 0; i < n; i++) {
+    Param::NUM_INDS.pop_front();
+    Param::CACHE_FILE_PREFIX.pop_front();
+  }
+  print_vec("NUM_INDS", Param::NUM_INDS, Param::NUM_INDS.size());
+  print_vec("CACHE_FILE_PREFIX", Param::CACHE_FILE_PREFIX, Param::CACHE_FILE_PREFIX.size());
+
   if (argc == 4) {
     string num_threads_str(argv[3]);
     int num_threads = stoi(num_threads_str);
     Param::NUM_THREADS = num_threads;
   }
+  Param::NUM_THREADS = 1; // comment this out once we make GWAS parallel
   cout << "Number of threads: " << Param::NUM_THREADS << endl;
 
   vector< pair<int, int> > pairs;
