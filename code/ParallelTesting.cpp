@@ -62,6 +62,9 @@ int main(int argc, char** argv) {
   for (int i = 0; i < 10; i++) {
     string output = "Iter " + to_string(i) + ", Thread " + to_string(omp_get_thread_num()) + "\n";
     cout << output;
+    for (int j = 0; j < 100000000000; j++) {
+      int k = i * i * i;
+    }
   } 
 
   // vector< pair<int, int> > pairs;
