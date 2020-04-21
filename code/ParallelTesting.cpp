@@ -121,9 +121,9 @@ int main(int argc, char** argv) {
   double runtime;
 
   // output flags
-  bool data_transfer = false;
-  bool fpdiv = true;
-  bool fpsqrt = true;
+  bool data_transfer = true;
+  bool fpdiv = false;
+  bool fpsqrt = false;
   bool print_output = false;
 
   vector<int> num_threads{ 8, 16 };
@@ -143,6 +143,8 @@ int main(int argc, char** argv) {
         ios_base::sync_with_stdio(false);
         #pragma omp parallel for num_threads(num_threads[i]) 
         for (int j = 0; j < num_threads[i]; j++) {
+          string output = "Iter " + to_string(i) + ", Thread " + to_string(omp_get_thread_num()) + "\n";
+          cout << output;
           mpc.SendVec(X[j], 0);
         }
         gettimeofday(&end, NULL);
@@ -154,6 +156,8 @@ int main(int argc, char** argv) {
       } else if (pid == 0) {
         #pragma omp parallel for num_threads(num_threads[i]) 
         for (int j = 0; j < num_threads[i]; j++) {
+          string output = "Iter " + to_string(i) + ", Thread " + to_string(omp_get_thread_num()) + "\n";
+          cout << output;
           mpc.ReceiveVec(X[j], 2, sub_n);
         }
       }
