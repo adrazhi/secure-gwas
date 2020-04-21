@@ -53,6 +53,12 @@ string cache(int pid, int index, string desc) {
   return oss.str();
 }
 
+string cache(int pid, int index, int chunk_id, string desc) {
+  ostringstream oss;
+  oss << Param::CACHE_FILE_PREFIX[index] << "_" << chunk_id << " " << desc << ".bin";
+  return oss.str();
+}
+
 string cache(int pid, int index) {
   ostringstream oss;
   oss << Param::CACHE_FILE_PREFIX[Param::CUR_ROUND] << "_" << index << ".bin";
@@ -474,8 +480,7 @@ bool logireg_protocol(MPCEnv& mpc, int pid) {
   return true;
 }
 
-bool data_sharing_protocol(MPCEnv& mpc, int pid) {
-  int n = Param::NUM_INDS[Param::CUR_ROUND];
+bool data_sharing_protocol(MPCEnv& mpc, int pid, int n, int chunk_id) {
   cout << "n: " << n << endl;
 
   fstream fs;
@@ -486,7 +491,7 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid) {
   Mat<ZZ_p> cov;
   Init(cov, n, Param::NUM_COVS);
 
-  fs.open(cache(pid, Param::CUR_ROUND, "input_geno").c_str(), ios::out | ios::binary);
+  fs.open(cache(pid, Param::CUR_ROUND, chunk_id, "input_geno").c_str(), ios::out | ios::binary);
   if (pid > 0) {
     mpc.ExportSeed(fs, 0);
   } else {
@@ -499,12 +504,13 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid) {
 
   git.Init(true, true);
 
-  long bsize = n / 10;
+  long bsize = n / 100;
 
   cout << "Begin processing:" << endl;
 
   tic();
   for (int i = 0; i < n; i++) {
+    cout << i << endl;
     Mat<ZZ_p> g;
     Vec<ZZ_p> miss, p;
 
@@ -548,7 +554,7 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid) {
     mpc.Print(cov[0], 5);
   }
 
-  fs.open(cache(pid, Param::CUR_ROUND, "input_pheno_cov").c_str(), ios::out | ios::binary);
+  fs.open(cache(pid, Param::CUR_ROUND, chunk_id, "input_pheno_cov").c_str(), ios::out | ios::binary);
   mpc.WriteToFile(pheno, fs);
   mpc.WriteToFile(cov, fs);
   fs.close();

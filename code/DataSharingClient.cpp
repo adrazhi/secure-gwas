@@ -10,6 +10,7 @@
 #include <map>
 #include <iostream>
 #include <sstream>
+#include <omp.h>
 
 using namespace NTL;
 using namespace std;
@@ -43,9 +44,33 @@ bool send_stream(string data_dir, MPCEnv& mpc, int mode, long start_line, long n
 
   long val;
   string line;
-  
   uint32_t lineno = 0;
-  while (getline(fin_geno, line)) {
+
+  // first skip ahead to the desired starting line
+  while (lineno < start_line) {
+    if (!getline(fin_geno, line)) {
+      cout << "Error: data matrix does not have NUM_INDS rows" << endl;
+      return false;
+    }
+    if (pheno_flag) {
+      if (!getline(fin_cov, line)) {
+        cout << "Error: covariate matrix does not have NUM_INDS rows" << endl;
+        return false;
+      }
+      if (!getline(fin_pheno, line)) {
+        cout << "Error: phenotype vector does not have NUM_INDS rows" << endl;
+        return false;
+      }
+    }
+    lineno++;
+  }
+
+  // now read the desired number of lines
+  for (long i = 0; i < num_lines; i++) {
+    if (!getline(fin_geno, line)) {
+      cout << "Error: data matrix does not have NUM_INDS rows" << endl;
+      return false;
+    }
     istringstream iss_geno(line);
 
     if (pheno_flag) {
@@ -137,13 +162,6 @@ bool send_stream(string data_dir, MPCEnv& mpc, int mode, long start_line, long n
       m -= rm;
       mpc.SendVec(m, 2);
     }
-
-    lineno++;
-  }
-
-  if (lineno != Param::NUM_INDS[Param::CUR_ROUND]) {
-    cout << "Error: data matrix does not have NUM_INDS rows" << endl;
-    return false;
   }
 
   fin_geno.close();
@@ -179,9 +197,7 @@ int main(int argc, char** argv) {
   if (!Param::CHUNK_MODE) {
     Param::NUM_THREADS = 1;
   } else {
-    if (Param::NUM_CHUNKS[Param::CUR_ROUND] < Param::NUM_THREADS) {
-      Param::NUM_THREADS = Param::NUM_CHUNKS[Param::CUR_ROUND];
-    }
+    Param::NUM_THREADS = Param::NUM_CHUNKS[Param::CUR_ROUND];
   }
 
   string data_dir;
@@ -199,69 +215,76 @@ int main(int argc, char** argv) {
     cout << "Data directory: " << data_dir << endl;
   }
 
-  bool success = true;
-  string geno_file = data_dir + "geno.txt";
-  ifstream fin_geno(geno_file.c_str());
-  
-  int start_line = 7000;
-  uint32_t lineno = 0;
-  string line;
+  vector< pair<int, int> > pairs;
+  pairs.push_back(make_pair(0, 1));
+  pairs.push_back(make_pair(0, 2));
+  pairs.push_back(make_pair(1, 2));
+  pairs.push_back(make_pair(1, 3));
+  pairs.push_back(make_pair(2, 3));
 
-  while (lineno < start_line) {
-    getline(fin_geno, line);
-    if (lineno % 10 == 0) {
-      cout << lineno << endl;
-    }
-    lineno++;
+  /* Initialize MPC environment */
+  MPCEnv mpc;
+  if (!mpc.Initialize(pid, pairs)) {
+    cout << "MPC environment initialization failed" << endl;
+    return 1;
   }
-  getline(fin_geno, line);
-  istringstream iss_geno(line);
-  long val;
-  iss_geno >> val;
-  cout << val << endl;
 
+  // divide up the dataset into chunks
+  long total_lines = Param::NUM_INDS[Param::CUR_ROUND];
+  long chunk_size =  total_lines / Param::NUM_THREADS;
+    
+  bool success = true;
+  if (pid < 3) {
+    #pragma omp parallel for num_threads(Param::NUM_THREADS)
+    for (int i = 0; i < Param::NUM_THREADS; i++) {
+      long start_line = chunk_size * i;
+      long end_line = start_line + chunk_size;
+      if (end_line > total_lines) {
+        end_line = total_lines;
+      }
+      long num_lines = end_line - start_line;
 
-  // vector< pair<int, int> > pairs;
-  // pairs.push_back(make_pair(0, 1));
-  // pairs.push_back(make_pair(0, 2));
-  // pairs.push_back(make_pair(1, 2));
-  // pairs.push_back(make_pair(1, 3));
-  // pairs.push_back(make_pair(2, 3));
+      bool inner_success = data_sharing_protocol(mpc, pid, num_lines, i);
+      if (!inner_success) {
+        success = false;
+        break;
+      }
+    }
+  } else {
+    #pragma omp parallel for num_threads(Param::NUM_THREADS)
+    for (int i = 0; i < Param::NUM_THREADS; i++) {
+      long start_line = chunk_size * i;
+      long end_line = start_line + chunk_size;
+      if (end_line > total_lines) {
+        end_line = total_lines;
+      }
+      long num_lines = end_line - start_line;
 
-  // /* Initialize MPC environment */
-  // MPCEnv mpc;
-  // if (!mpc.Initialize(pid, pairs)) {
-  //   cout << "MPC environment initialization failed" << endl;
-  //   return 1;
-  // }
+      /* Stream data upon request */
+      int signal = mpc.ReceiveInt(1);
 
-  // bool success;
-  // if (pid < 3) {
-  //   success = data_sharing_protocol(mpc, pid);
-  // } else {
-  //   /* Stream data upon request */
-  //   int signal = mpc.ReceiveInt(1);
+      while (signal != GwasIterator::TERM_CODE) {
+        bool inner_success = send_stream(data_dir, mpc, signal, start_line, num_lines);
+        if (!inner_success) {
+          success = false;
+          break;
+        }
+        signal = mpc.ReceiveInt(1);
+      }
+    }
 
-  //   while (signal != GwasIterator::TERM_CODE) {
-  //     success = send_stream(data_dir, mpc, signal);
-  //     if (!success) break;
+    cout << "Done with streaming data" << endl;
+  }
 
-  //     signal = mpc.ReceiveInt(1);
-  //   }
+  // This is here just to keep P0 online until the end for data transfer
+  // In practice, P0 would send data in advance before each phase and go offline
+  if (pid == 0) {
+    mpc.ReceiveBool(2);
+  } else if (pid == 2) {
+    mpc.SendBool(true, 0);
+  }
 
-  //   cout << "Done with streaming data" << endl;
-  //   success = true;
-  // }
-
-  // // This is here just to keep P0 online until the end for data transfer
-  // // In practice, P0 would send data in advance before each phase and go offline
-  // if (pid == 0) {
-  //   mpc.ReceiveBool(2);
-  // } else if (pid == 2) {
-  //   mpc.SendBool(true, 0);
-  // }
-
-  // mpc.CleanUp();
+  mpc.CleanUp();
 
   if (success) {
     cout << "Protocol successfully completed" << endl;
