@@ -235,7 +235,7 @@ int main(int argc, char** argv) {
   int num_chunks = Param::NUM_THREADS;
   long total_lines = Param::NUM_INDS[Param::CUR_ROUND];
   long chunk_size = ceil(total_lines / ((double) num_chunks));
-  num_chunks = ceil(n / ((double) chunk_size));
+  num_chunks = ceil(total_lines / ((double) chunk_size)); // this is necessary to avoid edge case due to ceiling operator
 
   // profile runtime for end to end data sharing
   struct timeval start, end;
