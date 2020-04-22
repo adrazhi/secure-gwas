@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
     Param::NUM_INDS[i-n] = Param::NUM_INDS[i];
     Param::CACHE_FILE_PREFIX[i-n] = Param::NUM_INDS[i];
   }
-  Param::NUM_INDS.resize(toal_chunks);
+  Param::NUM_INDS.resize(total_chunks);
   Param::CACHE_FILE_PREFIX.resize(total_chunks);
 
   print_vec("NUM_INDS", Param::NUM_INDS, Param::NUM_INDS.size());
