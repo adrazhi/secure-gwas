@@ -564,8 +564,8 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid, int n, int chunk_id) {
 }
 
 bool gwas_protocol(MPCEnv& mpc, int pid) {
-  SetNumThreads(Param::NUM_THREADS);
-  cout << AvailableThreads() << " threads created" << endl;
+  SetNumThreads(5);
+  // cout << AvailableThreads() << " threads created" << endl;
 
   int n0 = 0; // total number of individuals across datasets
   for (int i = 0; i < Param::NUM_INDS.size(); i++) {
@@ -604,6 +604,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     return false;
   }
 
+  // To Do: Parallelize this?
   for (int i = 0; i < m0; i++) {
     long chrom, pos;
     ifs >> chrom >> pos;
@@ -641,6 +642,10 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       offset += Param::NUM_INDS[j];
     }
     long inner_n0 = Param::NUM_INDS[i];
+
+    // avoid error by re-setting the modulus within each thread
+    ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+    ZZ_p::init(base_p);
 
     ifstream inner_ifs;
     inner_ifs.open(cache(pid, i, "input_pheno_cov").c_str(), ios::binary);
@@ -732,10 +737,14 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           for (int i = 0; i < num_datasets; i++) {
             long inner_n0 = Param::NUM_INDS[i];
 
+            // avoid error by re-setting the modulus within each thread
+            ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+            ZZ_p::init(base_p);
+
             ifstream inner_ifs;
             inner_ifs.open(cache(pid, i, "input_geno").c_str(), ios::binary);
 
-            mpc.ImportSeed(10, ifs);
+            mpc.ImportSeed(10, inner_ifs);
 
             long bsize = inner_n0 / 10;
 
@@ -751,8 +760,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
               mpc.RestoreSeed();
 
               if (pid == 2) {
-                mpc.SkipData(ifs, 3, m0);
-                mpc.ReadFromFile(miss, ifs, m0);
+                mpc.SkipData(inner_ifs, 3, m0);
+                mpc.ReadFromFile(miss, inner_ifs, m0);
               }
 
               // Recover secret shares from Beaver partition
@@ -763,7 +772,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
               }
 
               // Add to running sum
-              gmiss += miss; // To Do: need to make this threadsafe
+              // Since gmiss is shared data, this operation must be atomic
+              #pragma omp atomic
+              gmiss += miss;
 
               if ((j + 1) % bsize == 0 || j == inner_n0 - 1) {
                 cout << "\t" << j+1 << " / " << inner_n0 << ", "; toc(); tic();
@@ -813,8 +824,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   uint m1 = conv<uint>(Sum(gkeep1));
   cout << "n0: " << n0 << ", " << "m1: " << m1 << endl;
-
-  // To Do: Continue parallelizing from here
 
   cout << "Filtering SNP position vector" << endl;
   FilterVec(snp_pos, gkeep1);
@@ -880,18 +889,27 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
         if (pid > 0) {
           // Loop over all datasets to calculate individual missing/heterozygous rate for all individuals
-          rolling_n0 = 0;
-          for (int i = 0; i < Param::NUM_INDS.size(); i++) {
-            sub_n0 = Param::NUM_INDS[i];
+          #pragma omp parallel for num_threads(num_threads)
+          for (int i = 0; i < num_datasets; i++) {
+            long offset = 0;
+            for (int j = 0; j < i; j++) {
+              offset += Param::NUM_INDS[j];
+            }
+            long inner_n0 = Param::NUM_INDS[i];
 
-            ifs.open(cache(pid, i, "input_geno").c_str(), ios::binary);
+            // avoid error by re-setting the modulus within each thread
+            ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+            ZZ_p::init(base_p);
 
-            mpc.ImportSeed(10, ifs);
+            ifstream inner_ifs;
+            inner_ifs.open(cache(pid, i, "input_geno").c_str(), ios::binary);
 
-            long bsize = sub_n0 / 10;
+            mpc.ImportSeed(10, inner_ifs);
+
+            long bsize = inner_n0 / 10;
 
             tic();
-            for (int j = 0; j < sub_n0; j++) {
+            for (int j = 0; j < inner_n0; j++) {
               Mat<ZZ_p> g, g_mask;
               Vec<ZZ_p> miss, miss_mask;
 
@@ -902,8 +920,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
               mpc.RestoreSeed();
 
               if (pid == 2) {
-                mpc.ReadFromFile(g, ifs, 3, m0);
-                mpc.ReadFromFile(miss, ifs, m0);
+                mpc.ReadFromFile(g, inner_ifs, 3, m0);
+                mpc.ReadFromFile(miss, inner_ifs, m0);
               }
 
               // Recover secret shares from Beaver partition
@@ -918,17 +936,16 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
               // Add to running sum
               for (int k = 0; k < m0; k++) {
                 if (gkeep1[k] == 1) {
-                  imiss[rolling_n0 + j] += miss[k];
-                  ihet[rolling_n0 + j] += g[1][k];
+                  imiss[offset + j] += miss[k];
+                  ihet[offset + j] += g[1][k];
                 }
               }
 
-              if ((j + 1) % bsize == 0 || j == sub_n0 - 1) {
-                cout << "\t" << j+1 << " / " << sub_n0 << ", "; toc(); tic();
+              if ((j + 1) % bsize == 0 || j == inner_n0 - 1) {
+                cout << "\t" << j+1 << " / " << inner_n0 << ", "; toc(); tic();
               }
             }
-            ifs.close();
-            rolling_n0 += sub_n0;
+            inner_ifs.close();
           }
         }
 
@@ -1021,7 +1038,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   // Now calculate the "sub" n1 values for each dataset - ie number of individuals kept after filtering for each dataset
   vector<long> n1_vec;
   rolling_n0 = 0;
-  for (int i = 0; i < Param::NUM_INDS.size(); i++) {
+  for (int i = 0; i < num_datasets; i++) {
     n1_vec.push_back(0);
     sub_n0 = Param::NUM_INDS[i];
     for (int j = 0; j < sub_n0; j++) {
@@ -1072,55 +1089,64 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     cout << "Taking a pass to calculate genotype statistics:" << endl;
 
     long bsize = Param::PITER_BATCH_SIZE;
-
-    // Containers for batching the computation
-    Vec< Mat<ZZ_p> > g, g_mask;
-    Mat<ZZ_p> dosage, dosage_mask;
-    Mat<ZZ_p> miss, miss_mask;
-    Vec<ZZ_p> ctrl_vec, ctrl_mask_vec;
-    g.SetLength(3);
-    g_mask.SetLength(3);
-    dosage.SetDims(bsize, m1);
-    dosage_mask.SetDims(bsize, m1);
-    miss.SetDims(bsize, m1);
-    miss_mask.SetDims(bsize, m1);
-    for (int k = 0; k < 3; k++) {
-      g[k].SetDims(bsize, m1);
-      g_mask[k].SetDims(bsize, m1);
-    }
-    ctrl_vec.SetLength(bsize);
-    ctrl_mask_vec.SetLength(bsize);
-
     long report_bsize = n1 / 10;
-    ind = -1;
-    rolling_n1 = 0;
-    tic();
 
     // Loop over all datasets to calculate genotype statistics over all individuals
-    for (int dataset_idx = 0; dataset_idx < Param::NUM_INDS.size(); dataset_idx++) {
-      ifs.open(cache(pid, dataset_idx, "input_geno").c_str(), ios::binary);
+    #pragma omp parallel for num_threads(num_threads)
+    for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
+      // Containers for batching the computation
+      Vec< Mat<ZZ_p> > g, g_mask;
+      Mat<ZZ_p> dosage, dosage_mask;
+      Mat<ZZ_p> miss, miss_mask;
+      Vec<ZZ_p> ctrl_vec, ctrl_mask_vec;
+      g.SetLength(3);
+      g_mask.SetLength(3);
+      dosage.SetDims(bsize, m1);
+      dosage_mask.SetDims(bsize, m1);
+      miss.SetDims(bsize, m1);
+      miss_mask.SetDims(bsize, m1);
+      for (int k = 0; k < 3; k++) {
+        g[k].SetDims(bsize, m1);
+        g_mask[k].SetDims(bsize, m1);
+      }
+      ctrl_vec.SetLength(bsize);
+      ctrl_mask_vec.SetLength(bsize);
+      tic();
+
+      ifstream inner_ifs;
+      inner_ifs.open(cache(pid, dataset_idx, "input_geno").c_str(), ios::binary);
       if (pid > 0) {
-        mpc.ImportSeed(10, ifs);
+        mpc.ImportSeed(10, inner_ifs);
       } else {
         for (int p = 1; p <= 2; p++) {
-          mpc.ImportSeed(10 + p, ifs);
+          mpc.ImportSeed(10 + p, inner_ifs);
         }
       }
 
+      // avoid error by re-setting the modulus within each thread
+      ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+      ZZ_p::init(base_p);
+
       // Iterate over this dataset, considering only those individuals who have not been filtered out
-      sub_n1 = n1_vec[dataset_idx];
-      for (int i = rolling_n1; i < rolling_n1 + sub_n1; i++) {
-        ind++;
+      long offset = 0;
+      long inner_ind = -1;
+      for (int j = 0; j < dataset_idx; j++) {
+        offset += n1_vec[j];
+        inner_ind += Param::NUM_INDS[j];
+      }
+      long innner_n1 = n1_vec[dataset_idx];
+      for (int i = offset; i < offset + inner_n1; i++) {
+        inner_ind++;
 
         mpc.ProfilerPushState("file_io/rng");
 
         Mat<ZZ_p> g0, g0_mask;
         Vec<ZZ_p> miss0, miss0_mask;
 
-        while (ikeep[ind] != 1) {
+        while (ikeep[inner_ind] != 1) {
           if (pid > 0) {
-            mpc.SkipData(ifs, 3, m0); // g
-            mpc.SkipData(ifs, m0); // miss
+            mpc.SkipData(inner_ifs, 3, m0); // g
+            mpc.SkipData(inner_ifs, m0); // miss
 
             mpc.SwitchSeed(10);
             mpc.RandMat(g0_mask, 3, m0);
@@ -1134,12 +1160,12 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
               mpc.RestoreSeed();
             }
           }
-          ind++;
+          inner_ind++;
         }
 
         if (pid > 0) {
-          mpc.ReadFromFile(g0, ifs, 3, m0); // g
-          mpc.ReadFromFile(miss0, ifs, m0); // miss
+          mpc.ReadFromFile(g0, inner_ifs, 3, m0); // g
+          mpc.ReadFromFile(miss0, inner_ifs, m0); // miss
 
           mpc.SwitchSeed(10);
           mpc.RandMat(g0_mask, 3, m0);
@@ -1150,31 +1176,33 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           Init(g0_mask, 3, m0);
           Init(miss0, m0);
           Init(miss0_mask, m0);
+          Vec<ZZ_p> rand_vec;
+          Mat<ZZ_p> rand_mat;
 
           for (int p = 1; p <= 2; p++) {
             mpc.SwitchSeed(10 + p);
-            mpc.RandMat(tmp_mat, 3, m0);
-            mpc.RandVec(tmp_vec, m0);
+            mpc.RandMat(rand_mat, 3, m0);
+            mpc.RandVec(rand_vec, m0);
             mpc.RestoreSeed();
 
-            g0_mask += tmp_mat;
-            miss0_mask += tmp_vec;
+            g0_mask += rand_mat;
+            miss0_mask += rand_vec;
           }
         }
         
         mpc.ProfilerPopState(false); // file_io/rng
 
         // Filter out loci that failed missing rate filter
-        int ind2 = 0;
+        int inner_ind2 = 0;
         for (int j = 0; j < m0; j++) {
           if (gkeep1[j] == 1) {
             for (int k = 0; k < 3; k++) {
-              g[k][i % bsize][ind2] = g0[k][j];
-              g_mask[k][i % bsize][ind2] = g0_mask[k][j];
+              g[k][i % bsize][inner_ind2] = g0[k][j];
+              g_mask[k][i % bsize][inner_ind2] = g0_mask[k][j];
             }
-            miss[i % bsize][ind2] = miss0[j];
-            miss_mask[i % bsize][ind2] = miss0_mask[j];
-            ind2++;
+            miss[i % bsize][inner_ind2] = miss0[j];
+            miss_mask[i % bsize][inner_ind2] = miss0_mask[j];
+            inner_ind2++;
           }
         }
 
@@ -1186,18 +1214,24 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
         // Update running sums
         if (pid > 0) {
+          #pragma omp atomic
           n1_ctrl += ctrl_mask[i];
+          #pragma omp atomic
           gmiss += miss_mask[i % bsize];
+          #pragma omp atomic
           dosage_sum += dosage_mask[i % bsize];
 
           if (pid == 1) {
+            #pragma omp atomic
             n1_ctrl += ctrl[i];
+            #pragma omp atomic
             gmiss += miss[i % bsize];
+            #pragma omp atomic
             dosage_sum += dosage[i % bsize];
           }
         }
 
-        if (i % bsize == bsize - 1 || i == n1 - 1) {
+        if (i % bsize == bsize - 1 || i == inner_n1 - 1) {
           if (i % bsize < bsize - 1) {
             int new_bsize = (i % bsize) + 1;
             for (int k = 0; k < 3; k++) {
@@ -1212,19 +1246,33 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
             ctrl_mask_vec.SetLength(new_bsize);
           }
 
-          mpc.BeaverMult(gmiss_ctrl, ctrl_vec, ctrl_mask_vec, miss, miss_mask);
-          mpc.BeaverMult(dosage_sum_ctrl, ctrl_vec, ctrl_mask_vec, dosage, dosage_mask);
+          // Update Ctrl stats using intermediate results in a threadsafe manner
+          Vec<ZZ_p> inner_gmiss_ctrl, inner_dosage_sum_ctrl;
+          Mat<ZZ_p> inner_g_count_ctrl;
+          Init(inner_gmiss_ctrl, m1);
+          Init(inner_dosage_sum_ctrl, m1);
+          Init(inner_g_count_ctrl, 3, m1);
+
+          mpc.BeaverMult(inner_gmiss_ctrl, ctrl_vec, ctrl_mask_vec, miss, miss_mask);
+          #pragma omp atomic
+          gmiss_ctrl += inner_gmiss_ctrl;
+
+          mpc.BeaverMult(inner_dosage_sum_ctrl, ctrl_vec, ctrl_mask_vec, dosage, dosage_mask);
+          #pragma omp atomic
+          dosage_sum_ctrl += inner_dosage_sum_ctrl;
+
           for (int k = 0; k < 3; k++) {
-            mpc.BeaverMult(g_count_ctrl[k], ctrl_vec, ctrl_mask_vec, g[k], g_mask[k]);
+            mpc.BeaverMult(inner_g_count_ctrl[k], ctrl_vec, ctrl_mask_vec, g[k], g_mask[k]);
+            #pragma omp atomic
+            g_count_ctrl[k] += inner_g_count_ctrl[k];
           }
         }
 
-        if ((i + 1) % report_bsize == 0 || i == n1 - 1) {
-          cout << "\t" << i+1 << " / " << n1 << ", "; toc(); tic();
+        if ((i + 1) % report_bsize == 0 || i == inner_n1 - 1) {
+          cout << "\t" << i+1 << " / " << inner_n1 << ", "; toc(); tic();
         }
       }
-      rolling_n1 += sub_n1;
-      ifs.close();
+      inner_ifs.close();
     }
 
     mpc.BeaverReconstruct(gmiss_ctrl);
