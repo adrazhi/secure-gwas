@@ -48,7 +48,6 @@ int main(int argc, char** argv) {
   }
 
   // pre-process the param before running GWAS
-  print_vec("CACHE_FILE_PREFIX", Param::CACHE_FILE_PREFIX, Param::CACHE_FILE_PREFIX.size());
   int n = Param::NUM_INDS.size();
   int total_chunks = 0;
   for (int i = 0; i < n; i++) {
@@ -67,9 +66,13 @@ int main(int argc, char** argv) {
 
     // expand out the cache file prefixes
     for (int j = 0; j < num_chunks; j++) {
-      Param::CACHE_FILE_PREFIX.push_back(Param::CACHE_FILE_PREFIX[i] + "_" + to_string(j));
+      string to_add = Param::CACHE_FILE_PREFIX[i] + "_" + to_string(j);
+      cout << to_add << " ";
+      Param::CACHE_FILE_PREFIX.push_back(to_add);
     }
   }
+
+  cout << endl;
 
   // now get rid of old values
   for (int i = n; i < n + total_chunks; i++) {
