@@ -48,6 +48,7 @@ int main(int argc, char** argv) {
   }
 
   // pre-process the param before running GWAS
+  print_vec("CACHE_FILE_PREFIX", Param::CACHE_FILE_PREFIX, Param::CACHE_FILE_PREFIX.size());
   int n = Param::NUM_INDS.size();
   int total_chunks = 0;
   for (int i = 0; i < n; i++) {
