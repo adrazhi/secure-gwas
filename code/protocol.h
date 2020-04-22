@@ -55,7 +55,7 @@ string cache(int pid, int index, string desc) {
 
 string cache(int pid, int index, int chunk_id, string desc) {
   ostringstream oss;
-  oss << Param::CACHE_FILE_PREFIX[index] << "_" << chunk_id << " " << desc << ".bin";
+  oss << Param::CACHE_FILE_PREFIX[index] << "_" << chunk_id << "_" << desc << ".bin";
   return oss.str();
 }
 
