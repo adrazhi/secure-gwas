@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <map>
+#include <string>
 #include <iostream>
 #include <sstream>
 #include <bits/stdc++.h>
@@ -48,8 +49,10 @@ int main(int argc, char** argv) {
 
   // pre-process the param before running GWAS
   int n = Param::NUM_INDS.size();
+  int total_chunks = 0;
   for (int i = 0; i < n; i++) {
     int num_chunks = Param::NUM_CHUNKS[i];
+    total_chunks += num_chunks;
 
     // expand out the numbers of individuals
     long total = Param::NUM_INDS[i];
@@ -68,12 +71,12 @@ int main(int argc, char** argv) {
   }
 
   // now get rid of old values
-  for (int i = 0; i < n; i++) {
-    Param::NUM_INDS[i] = Param::NUM_INDS[i+n];
-    Param::CACHE_FILE_PREFIX[i] = Param::NUM_INDS[i+n];
+  for (int i = n; i < n + total_chunks; i++) {
+    Param::NUM_INDS[i-n] = Param::NUM_INDS[i];
+    Param::CACHE_FILE_PREFIX[i-n] = Param::NUM_INDS[i];
   }
-  Param::NUM_INDS.resize(n);
-  Param::CACHE_FILE_PREFIX.resize(n);
+  Param::NUM_INDS.resize(toal_chunks);
+  Param::CACHE_FILE_PREFIX.resize(total_chunks);
 
   print_vec("NUM_INDS", Param::NUM_INDS, Param::NUM_INDS.size());
   print_vec("CACHE_FILE_PREFIX", Param::CACHE_FILE_PREFIX, Param::CACHE_FILE_PREFIX.size());
