@@ -590,7 +590,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   long sub_n0;
 
   int num_datasets = Param::NUM_INDS.size();
-  int dataset_threads = (Param::NUM_THREADS < num_datasets) ? Param::NUM_THREADS : num_datasets;
+  int num_threads = (Param::NUM_THREADS < num_datasets) ? Param::NUM_THREADS : num_datasets;
 
   mpc.ProfilerPushState("main");
 
@@ -634,7 +634,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   cout << "Initial data sharing results found" << endl;
 
-  #pragma omp parallel for num_threads(dataset_threads)
+  #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < num_datasets; i++) {
     long offset = 0;
     for (int j = 0; j < i; j++) {
@@ -728,7 +728,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
         if (pid > 0) {
           // Loop over all datasets to calculate missing rate across all individuals
-          #pragma omp parallel for num_threads(dataset_threads)
+          #pragma omp parallel for num_threads(num_threads)
           for (int i = 0; i < num_datasets; i++) {
             long inner_n0 = Param::NUM_INDS[i];
 

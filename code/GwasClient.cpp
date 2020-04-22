@@ -16,7 +16,8 @@
 using namespace NTL;
 using namespace std;
 
-void print_vec(const char* name, vector<double> &vect, int num) {
+template <class T>
+void print_vec(const char* name, vector<T> &vect, int num) {
   cout << name << ": ";
   for (int i = 0; i < num; i++) {
     cout << vect[i] << "  ";
@@ -65,10 +66,15 @@ int main(int argc, char** argv) {
       Param::CACHE_FILE_PREFIX.push_back(Param::CACHE_FILE_PREFIX[i] + "_" + to_string(j));
     }
   }
+
+  // now get rid of old values
   for (int i = 0; i < n; i++) {
-    Param::NUM_INDS.pop_front();
-    Param::CACHE_FILE_PREFIX.pop_front();
+    Param::NUM_INDS[i] = Param::NUM_INDS[i+n];
+    Param::CACHE_FILE_PREFIX[i] = Param::NUM_INDS[i+n];
   }
+  Param::NUM_INDS.resize(n);
+  Param::CACHE_FILE_PREFIX.resize(n);
+
   print_vec("NUM_INDS", Param::NUM_INDS, Param::NUM_INDS.size());
   print_vec("CACHE_FILE_PREFIX", Param::CACHE_FILE_PREFIX, Param::CACHE_FILE_PREFIX.size());
 
