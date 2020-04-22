@@ -773,8 +773,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
               // Add to running sum
               // Since gmiss is shared data, this operation must be atomic
-              #pragma omp atomic
-              gmiss += miss;
+              #pragma omp critical ( gmiss_update )
+                gmiss += miss;
 
               if ((j + 1) % bsize == 0 || j == inner_n0 - 1) {
                 cout << "\t" << j+1 << " / " << inner_n0 << ", "; toc(); tic();
@@ -1134,7 +1134,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         offset += n1_vec[j];
         inner_ind += Param::NUM_INDS[j];
       }
-      long innner_n1 = n1_vec[dataset_idx];
+      long inner_n1 = n1_vec[dataset_idx];
       for (int i = offset; i < offset + inner_n1; i++) {
         inner_ind++;
 
@@ -1212,22 +1212,22 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         ctrl_vec[i % bsize] = ctrl[i];
         ctrl_mask_vec[i % bsize] = ctrl_mask[i];
 
-        // Update running sums
+        // Update running sums - since these are shared by threads, each update must be atomic
         if (pid > 0) {
-          #pragma omp atomic
-          n1_ctrl += ctrl_mask[i];
-          #pragma omp atomic
-          gmiss += miss_mask[i % bsize];
-          #pragma omp atomic
-          dosage_sum += dosage_mask[i % bsize];
+          #pragma omp critical ( ctrl_mask_update )
+            n1_ctrl += ctrl_mask[i];
+          #pragma omp critical ( miss_mask_update )
+            gmiss += miss_mask[i % bsize];
+          #pragma omp critical ( dosage_mask_update )
+            dosage_sum += dosage_mask[i % bsize];
 
           if (pid == 1) {
-            #pragma omp atomic
-            n1_ctrl += ctrl[i];
-            #pragma omp atomic
-            gmiss += miss[i % bsize];
-            #pragma omp atomic
-            dosage_sum += dosage[i % bsize];
+            #pragma omp critical ( ctrl_update )
+              n1_ctrl += ctrl[i];
+            #pragma omp critical ( miss_update )
+              gmiss += miss[i % bsize];
+            #pragma omp critical ( dosage_update )
+              dosage_sum += dosage[i % bsize];
           }
         }
 
@@ -1254,17 +1254,17 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           Init(inner_g_count_ctrl, 3, m1);
 
           mpc.BeaverMult(inner_gmiss_ctrl, ctrl_vec, ctrl_mask_vec, miss, miss_mask);
-          #pragma omp atomic
-          gmiss_ctrl += inner_gmiss_ctrl;
+          #pragma omp critical ( gmiss_ctrl_update )
+            gmiss_ctrl += inner_gmiss_ctrl;
 
           mpc.BeaverMult(inner_dosage_sum_ctrl, ctrl_vec, ctrl_mask_vec, dosage, dosage_mask);
-          #pragma omp atomic
-          dosage_sum_ctrl += inner_dosage_sum_ctrl;
+          #pragma omp critical ( dosage_sum_ctrl_update )
+            dosage_sum_ctrl += inner_dosage_sum_ctrl;
 
           for (int k = 0; k < 3; k++) {
             mpc.BeaverMult(inner_g_count_ctrl[k], ctrl_vec, ctrl_mask_vec, g[k], g_mask[k]);
-            #pragma omp atomic
-            g_count_ctrl[k] += inner_g_count_ctrl[k];
+            #pragma omp critical ( g_count_ctrl_update )
+              g_count_ctrl[k] += inner_g_count_ctrl[k];
           }
         }
 
@@ -1660,7 +1660,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         offset += n1_vec[j];
         inner_ind += Param::NUM_INDS[j];
       }
-      long innner_n1 = n1_vec[dataset_idx];
+      long inner_n1 = n1_vec[dataset_idx];
       for (int i = offset; i < offset + inner_n1; i++) {
         inner_ind++;
 
