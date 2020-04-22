@@ -66,18 +66,15 @@ int main(int argc, char** argv) {
 
     // expand out the cache file prefixes
     for (int j = 0; j < num_chunks; j++) {
-      string to_add = Param::CACHE_FILE_PREFIX[i] + "_" + to_string(j);
-      cout << to_add << " ";
-      Param::CACHE_FILE_PREFIX.push_back(to_add);
+      string pref = Param::CACHE_FILE_PREFIX[i] + "_" + to_string(j);
+      Param::CACHE_FILE_PREFIX.push_back(pref);
     }
   }
-
-  cout << endl;
 
   // now get rid of old values
   for (int i = n; i < n + total_chunks; i++) {
     Param::NUM_INDS[i-n] = Param::NUM_INDS[i];
-    Param::CACHE_FILE_PREFIX[i-n] = Param::NUM_INDS[i];
+    Param::CACHE_FILE_PREFIX[i-n] = Param::CACHE_FILE_PREFIX[i];
   }
   Param::NUM_INDS.resize(total_chunks);
   Param::CACHE_FILE_PREFIX.resize(total_chunks);
