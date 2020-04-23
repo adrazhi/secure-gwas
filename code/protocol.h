@@ -1887,7 +1887,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     Mat<ZZ_p> Y;
     Init(Y, kp, m3);
 
-    #pragma omp parallel for num_threads(num_threads)
+    // #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < kp; i++) {
       mpc.BeaverMultElem(Y[i], Y_cur[i], Y_cur_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
     }
@@ -1916,7 +1916,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       // Normalize Q by standard deviations
       Init(Q_scaled, kp, m3);
-      #pragma omp parallel for num_threads(num_threads)
+      // #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(Q_scaled[i], Q[i], Q_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
       }
@@ -1927,7 +1927,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       // Pre-multiply with g_mean to simplify calculation of centering matrix
       Init(Q_scaled_gmean, kp, m3);
-      #pragma omp parallel for num_threads(num_threads)
+      // #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(Q_scaled_gmean[i], Q_scaled[i], Q_scaled_mask[i],
                            g_mean_pca, g_mean_pca_mask);
@@ -2100,7 +2100,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       Mat<ZZ_p> gQ_adj_gmean;
       Init(gQ_adj_gmean, kp, m3);
-      #pragma omp parallel for num_threads(num_threads)
+      // #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(gQ_adj_gmean[i], gQ_adj[i], gQ_adj_mask[i],
                            g_mean_pca, g_mean_pca_mask);
@@ -2119,7 +2119,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       Mat<ZZ_p> gQ_scaled;
       gQ_scaled.SetDims(kp, m3);
       clear(gQ_scaled);
-      #pragma omp parallel for num_threads(num_threads)
+      // #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(gQ_scaled[i], gQ[i], gQ_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
       }
