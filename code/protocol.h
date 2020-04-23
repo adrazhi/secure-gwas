@@ -604,7 +604,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     return false;
   }
 
-  // To Do: Parallelize this?
   for (int i = 0; i < m0; i++) {
     long chrom, pos;
     ifs >> chrom >> pos;
@@ -723,9 +722,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
         cout << "Locus missing rate cache found" << endl;
 
-        ifs.open(cache(pid, "gmiss").c_str(), ios::binary);
-        mpc.ReadFromFile(gmiss, ifs, m0);
-        ifs.close();
+        // ifs.open(cache(pid, "gmiss").c_str(), ios::binary);
+        // mpc.ReadFromFile(gmiss, ifs, m0);
+        // ifs.close();
 
       } else {
 
