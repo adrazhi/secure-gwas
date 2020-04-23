@@ -1351,6 +1351,11 @@ public:
     RandomBnd(x._ZZ_p__rep, ZZ_p::modulus(), stream);
   }
 
+  long RandBnd(long bnd) {
+    int thread = omp_get_thread_num();
+    return RandomBnd(bnd, prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second);
+  }
+
   void RandElem(ZZ& a, int fid) {
     int thread = omp_get_thread_num();
     RandomBnd(a, primes[fid], prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second);

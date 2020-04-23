@@ -413,7 +413,7 @@ bool logireg_protocol(MPCEnv& mpc, int pid) {
 
   mpc.SwitchSeed(-1);
   for (int i = 0; i < n1-1; i++) {
-    long chosen = RandomBnd(n1-i);
+    long chosen = mpc.RandBnd(n1-i);
     Vec<ZZ_p> tmp;
     if (chosen > 0) {
       tmp = xrt[i];
@@ -1796,8 +1796,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     for (int cur = 0; cur < n1; cur++) {
       // Count sketch (use global PRG)
       mpc.SwitchSeed(-1);
-      long bucket_index = RandomBnd(kp);
-      long rand_sign = RandomBnd(2) * 2 - 1;
+      long bucket_index = mpc.RandBnd(kp);
+      long rand_sign = mpc.RandBnd(2) * 2 - 1;
       mpc.RestoreSeed();
 
       Vec<ZZ_p> g, g_mask, miss, miss_mask;
@@ -1886,6 +1886,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     Mat<ZZ_p> Y;
     Init(Y, kp, m3);
 
+    #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < kp; i++) {
       mpc.BeaverMultElem(Y[i], Y_cur[i], Y_cur_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
     }
@@ -1914,6 +1915,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       // Normalize Q by standard deviations
       Init(Q_scaled, kp, m3);
+      #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(Q_scaled[i], Q[i], Q_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
       }
@@ -1924,6 +1926,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       // Pre-multiply with g_mean to simplify calculation of centering matrix
       Init(Q_scaled_gmean, kp, m3);
+      #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(Q_scaled_gmean[i], Q_scaled[i], Q_scaled_mask[i],
                            g_mean_pca, g_mean_pca_mask);
@@ -2096,6 +2099,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       Mat<ZZ_p> gQ_adj_gmean;
       Init(gQ_adj_gmean, kp, m3);
+      #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(gQ_adj_gmean[i], gQ_adj[i], gQ_adj_mask[i],
                            g_mean_pca, g_mean_pca_mask);

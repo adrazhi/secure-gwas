@@ -2020,12 +2020,17 @@ long RandomLen_long(long l)
    return long((res & mask) | (mask+1UL)); 
 }
 
-
+/* begin shreyanj code */
 long RandomBnd(long bnd)
+{
+   RandomStream& stream = LocalGetCurrentRandomStream();
+   RandomBnd(bnd, stream);
+}
+
+long RandomBnd(long bnd, RandomStream& stream)
 {
    if (bnd <= 1) return 0;
 
-   RandomStream& stream = LocalGetCurrentRandomStream();
    unsigned char buf[NTL_BITS_PER_LONG/8];
    long l = NumBits(bnd-1);
    long nb = (l+7)/8;
@@ -2039,9 +2044,6 @@ long RandomBnd(long bnd)
    return tmp;
 }
 
-
-
-/* begin shreyanj code */
 
 void RandomBits(ZZ& x, long l)
 {

@@ -1152,6 +1152,11 @@ inline ZZ RandomBits_ZZ(long NumBits, RandomStream& stream)
 long RandomBnd(long n);
 inline void RandomBnd(long& x, long n) { x = RandomBnd(n); }
 
+/* begin shreyanj code */
+long RandomBnd(long n, RandomStream& stream);
+inline void RandomBnd(long& x, long n, RandomStream& stream) { x = RandomBnd(n, stream); }
+/* end shreyanj code */
+
 long RandomLen_long(long l);
 inline void RandomLen(long& x, long l) { x = RandomLen_long(l); }
 
