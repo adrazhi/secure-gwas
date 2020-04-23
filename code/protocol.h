@@ -2118,6 +2118,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       Mat<ZZ_p> gQ_scaled;
       gQ_scaled.SetDims(kp, m3);
       clear(gQ_scaled);
+      #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(gQ_scaled[i], gQ[i], gQ_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
       }
