@@ -722,9 +722,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
         cout << "Locus missing rate cache found" << endl;
 
-        // ifs.open(cache(pid, "gmiss").c_str(), ios::binary);
-        // mpc.ReadFromFile(gmiss, ifs, m0);
-        // ifs.close();
+        ifs.open(cache(pid, "gmiss").c_str(), ios::binary);
+        mpc.ReadFromFile(gmiss, ifs, m0);
+        ifs.close();
 
       } else {
 
@@ -796,7 +796,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         cout << "gmiss" << endl;
         mpc.Print(gmiss, 5);
       }
-      cout << "Locus missing rate filter ... "; tic();
+      cout << "Locus missing rate filter ... " << endl; tic();
 
       ZZ_p gmiss_ub = ZZ_p((long) (n0 * Param::GMISS_UB));
       mpc.LessThanPublic(gkeep1, gmiss, gmiss_ub);
