@@ -1850,6 +1850,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       }
     }
     kp = empty_slot;
+    cout << "kp: " << kp << endl;
     Y_cur.SetDims(kp, m3);
     mpc.Trunc(Y_cur);
 
@@ -2189,6 +2190,10 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     if (Param::DEBUG) {
       cout << "Z_gram" << endl;
       mpc.PrintFP(Z_gram[0], 5);
+      mpc.PrintFP(Z_gram[1], 5);
+      mpc.PrintFP(Z_gram[2], 5);
+      mpc.PrintFP(Z_gram[3], 5);
+      mpc.PrintFP(Z_gram[4], 5);
     }
 
     mpc.ProfilerPushState("eigen_solve");
