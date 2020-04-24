@@ -1231,8 +1231,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         }
 
         if ((i - offset) % bsize == bsize - 1 || (i - offset) == inner_n1 - 1) {
-          if (i % bsize < bsize - 1) {
-            int new_bsize = (i % bsize) + 1;
+          if ((i - offset) % bsize < bsize - 1) {
+            int new_bsize = ((i - offset) % bsize) + 1;
             for (int k = 0; k < 3; k++) {
               g[k].SetDims(new_bsize, m1);
               g_mask[k].SetDims(new_bsize, m1);
