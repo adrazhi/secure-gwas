@@ -504,7 +504,7 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid, int n, int chunk_id) {
 
   git.Init(true, true);
 
-  long bsize = n / 100;
+  long bsize = n / 10;
 
   cout << "Begin processing:" << endl;
 
