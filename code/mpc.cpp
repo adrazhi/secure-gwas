@@ -78,14 +78,6 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
 
   pstate.push("");
 
-  buf = (unsigned char *) malloc(Param::MPC_BUF_SIZE + GCM_AUTH_TAG_LEN);
-  if (buf == NULL) {
-    cout << "Fail to allocate MPC buffer" << endl;
-    exit(1);
-  } else {
-    cout << "Allocated MPC buffer of size " << Param::MPC_BUF_SIZE << endl;
-  }
-
   for (int thread = 0; thread < Param::NUM_THREADS; thread++) {
     buf_map[thread] = (unsigned char *) malloc(Param::MPC_BUF_SIZE + GCM_AUTH_TAG_LEN);
     if (buf_map[thread] == NULL) {
@@ -93,6 +85,7 @@ bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
       exit(1);
     }
   }
+  cout << "Allocated MPC buffers of size " << Param::MPC_BUF_SIZE << endl;
 
   cout << "Number of bytes per ZZ_p: " << ZZ_bytes[0] << endl;
 
@@ -2312,7 +2305,8 @@ void MPCEnv::ReadWithFilter(Vec<ZZ_p>& a, ifstream& ifs, Vec<ZZ_p>& filt) {
   assert(ifs.is_open());
   a.SetLength(filt.length());
 
-  unsigned char *buf_ptr = buf;
+  int index = omp_get_thread_num();
+  unsigned char *buf_ptr = buf_map[index];
   uint64_t stored_in_buf = 0;
 
   for (int i = 0; i < filt.length(); i++) {
@@ -2338,9 +2332,9 @@ void MPCEnv::ReadWithFilter(Vec<ZZ_p>& a, ifstream& ifs, Vec<ZZ_p>& filt) {
           count = ZZ_per_buf[0];
         }
 
-        ifs.read((char *)buf, count * ZZ_bytes[0]);
+        ifs.read((char *)buf_map[index], count * ZZ_bytes[0]);
         stored_in_buf += count;
-        buf_ptr = buf;
+        buf_ptr = buf_map[index];
       }
 
       a[i] = conv<ZZ_p>(ZZFromBytes(buf_ptr, ZZ_bytes[0]));
@@ -2353,14 +2347,15 @@ void MPCEnv::ReadWithFilter(Vec<ZZ_p>& a, ifstream& ifs, Vec<ZZ_p>& filt) {
 void MPCEnv::Write(Mat<ZZ_p>& a, fstream& ofs) {
   assert(ofs.is_open());
 
-  unsigned char *buf_ptr = buf;
+  int index = omp_get_thread_num();
+  unsigned char *buf_ptr = buf_map[index];
   uint64_t stored_in_buf = 0;
   for (int i = 0; i < a.NumRows(); i++) {
     for (int j = 0; j < a.NumCols(); j++) {
       if (stored_in_buf == ZZ_per_buf[0]) {
-        ofs.write((const char *)buf, ZZ_bytes[0] * stored_in_buf);
+        ofs.write((const char *)buf_map[index], ZZ_bytes[0] * stored_in_buf);
         stored_in_buf = 0;
-        buf_ptr = buf;
+        buf_ptr = buf_map[index];
       }
 
       BytesFromZZ(buf_ptr, rep(a[i][j]), ZZ_bytes[0]);
@@ -2370,7 +2365,7 @@ void MPCEnv::Write(Mat<ZZ_p>& a, fstream& ofs) {
   }
 
   if (stored_in_buf > 0) {
-    ofs.write((const char *)buf, ZZ_bytes[0] * stored_in_buf);
+    ofs.write((const char *)buf_map[index], ZZ_bytes[0] * stored_in_buf);
   }
 }
 
@@ -2394,7 +2389,8 @@ void MPCEnv::Read(Mat<ZZ_p>& a, ifstream& ifs, int nrows, int ncols) {
   assert(ifs.is_open());
 
   a.SetDims(nrows, ncols);
-  unsigned char *buf_ptr = buf;
+  int index = omp_get_thread_num();
+  unsigned char *buf_ptr = buf_map[index];
   uint64_t stored_in_buf = 0;
   uint64_t remaining = nrows * ncols;
   for (int i = 0; i < a.NumRows(); i++) {
@@ -2406,10 +2402,10 @@ void MPCEnv::Read(Mat<ZZ_p>& a, ifstream& ifs, int nrows, int ncols) {
         } else {
           count = ZZ_per_buf[0];
         }
-        ifs.read((char *)buf, count * ZZ_bytes[0]);
+        ifs.read((char *)buf_map[index], count * ZZ_bytes[0]);
         stored_in_buf += count;
         remaining -= count;
-        buf_ptr = buf;
+        buf_ptr = buf_map[index];
       }
 
       a[i][j] = conv<ZZ_p>(ZZFromBytes(buf_ptr, ZZ_bytes[0]));
@@ -2421,26 +2417,30 @@ void MPCEnv::Read(Mat<ZZ_p>& a, ifstream& ifs, int nrows, int ncols) {
 
 void MPCEnv::SendInt(int num, int to_pid) {
   cout << "SendInt called: num(" << num << "), to_pid(" << to_pid << ")" << endl;
-  *((int *)buf) = num;
-  sockets.find(to_pid)->second[omp_get_thread_num()].Send(buf, sizeof(int));
+  int index = omp_get_thread_num();
+  *((int *)buf_map[index]) = num;
+  sockets.find(to_pid)->second[omp_get_thread_num()].Send(buf_map[index], sizeof(int));
 }
 
 int MPCEnv::ReceiveInt(int from_pid) {
   cout << "ReceiveInt called: from_pid(" << from_pid << ")" << endl;
-  sockets.find(from_pid)->second[omp_get_thread_num()].Receive(buf, sizeof(int));
-  return *((int *)buf);
+  int index = omp_get_thread_num();
+  sockets.find(from_pid)->second[omp_get_thread_num()].Receive(buf_map[index], sizeof(int));
+  return *((int *)buf_map[index]);
 }
 
 void MPCEnv::SendBool(bool flag, int to_pid) {
   cout << "SendBool called: flag(" << flag << "), to_pid(" << to_pid << ")" << endl;
-  *((bool *)buf) = flag;
-  sockets.find(to_pid)->second[omp_get_thread_num()].Send(buf, sizeof(bool));
+  int index = omp_get_thread_num();
+  *((bool *)buf_map[index]) = flag;
+  sockets.find(to_pid)->second[omp_get_thread_num()].Send(buf_map[index], sizeof(bool));
 }
 
 bool MPCEnv::ReceiveBool(int from_pid) {
   cout << "ReceiveBool called: from_pid(" << from_pid << ")" << endl;
-  sockets.find(from_pid)->second[omp_get_thread_num()].Receive(buf, sizeof(bool));
-  return *((bool *)buf);
+  int index = omp_get_thread_num();
+  sockets.find(from_pid)->second[omp_get_thread_num()].Receive(buf_map[index], sizeof(bool));
+  return *((bool *)buf_map[index]);
 }
 
 void MPCEnv::SwitchSeed(int pid) {
@@ -2450,32 +2450,33 @@ void MPCEnv::SwitchSeed(int pid) {
 void MPCEnv::ExportSeed(fstream& ofs, int pid) {
   assert(ofs.is_open());
 
-  RandomStream rs = prg.find(omp_get_thread_num())->second.find(pid)->second;
-  rs.serialize(buf);
+  int index = omp_get_thread_num();
+  RandomStream rs = prg.find(index)->second.find(pid)->second;
+  rs.serialize(buf_map[index]);
 
-  ofs.write((const char *)buf, RandomStream::numBytes());
+  ofs.write((const char *)buf_map[index], RandomStream::numBytes());
 }
 
 void MPCEnv::ExportSeed(fstream& ofs) {
   assert(ofs.is_open());
 
-  int thread = omp_get_thread_num();
-  RandomStream rs = prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second;
-  rs.serialize(buf);
+  int index = omp_get_thread_num();
+  RandomStream rs = prg.find(index)->second.find(cur_prg_pid.find(index)->second)->second;
+  rs.serialize(buf_map[index]);
 
-  ofs.write((const char *)buf, RandomStream::numBytes());
+  ofs.write((const char *)buf_map[index], RandomStream::numBytes());
 }
 
 void MPCEnv::ImportSeed(int newid, ifstream& ifs) {
   assert(ifs.is_open());
 
-  ifs.read((char *)buf, RandomStream::numBytes());
+  int index = omp_get_thread_num();
+  ifs.read((char *)buf_map[index], RandomStream::numBytes());
 
-  RandomStream rs((const unsigned char *)buf, true);
+  RandomStream rs((const unsigned char *)buf_map[index], true);
 
-  int thread = omp_get_thread_num();
   pair<map<int,RandomStream>::iterator,bool> ret;
-  ret = prg.find(thread)->second.insert(pair<int, RandomStream>(newid, rs));
+  ret = prg.find(index)->second.insert(pair<int, RandomStream>(newid, rs));
   if (!ret.second) { // ID exists already
     ret.first->second = rs;
   }
