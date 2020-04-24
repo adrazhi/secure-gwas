@@ -280,12 +280,7 @@ int main(int argc, char** argv) {
 
       while (signal != GwasIterator::TERM_CODE) {
         bool inner_success = send_stream(data_dir, mpc, signal, start_line, num_lines);
-        if (!inner_success) {
-          success = false;
-          signal = GwasIterator::TERM_CODE;
-        } else {
-          signal = mpc.ReceiveInt(1);
-        }
+        signal = mpc.ReceiveInt(1);
       }
     }
 
