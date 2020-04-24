@@ -1628,7 +1628,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     cout << "Caching input data for PCA:" << endl;
 
-    Vec<Vec<ZZ_p>> miss, miss_mask, dosage, dosage_mask;;
+    Vec<Vec<ZZ_p>> miss, miss_mask, dosage, dosage_mask;
     miss.SetLength(n1);
     miss_mask.SetLength(n1);
     dosage.SetLength(n1);
@@ -2189,11 +2189,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     if (Param::DEBUG) {
       cout << "Z_gram" << endl;
-      mpc.PrintFP(Z_gram[0], 5);
-      mpc.PrintFP(Z_gram[1], 5);
-      mpc.PrintFP(Z_gram[2], 5);
-      mpc.PrintFP(Z_gram[3], 5);
-      mpc.PrintFP(Z_gram[4], 5);
+      for (int i = 0; i < kp; i++) {
+        mpc.PrintFP(Z_gram[i], kp);
+      }
     }
 
     mpc.ProfilerPushState("eigen_solve");
@@ -2211,7 +2209,11 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     mpc.ProfilerPopState(false); // eigen_solve
 
     if (Param::DEBUG) {
-      mpc.PrintFP(U[0], 5);
+      for (int i = 0; i < k; i++) {
+        mpc.PrintFP(U[k], 5);
+      }
+      cout << "K eigenvalues" << endl;
+      mpc.PrintFP(L, k);
     }
 
     // Recover singular vectors
