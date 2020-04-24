@@ -1548,17 +1548,22 @@ void MPCEnv::FPSqrt(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
 void MPCEnv::FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
   int n = a.length();
   int nbatch = Param::NUM_THREADS;
-  if (debug) cout << "FPSqrt with number of threads: " << nbatch << endl;
   int batch_size = ceil(n / ((double) nbatch));
+  while (batch_size > Param::DIV_MAX_N) {
+    nbatch += Param::NUM_THREADS;
+    batch_size = ceil(n / ((double) nbatch));
+  }
   // there's an edge case where the ceiling operation creates a batch size such that we need fewer than nbatch threads
   // eg. n = 500, 64 threads creates a batch size of ceil(500/64) = 8, but 8 * 63 = 504 > n so we only need 63 threads
   // solution is to reset nbatch after setting batch_size
   nbatch = ceil(n / ((double) batch_size));
 
+  if (debug) cout << "FPSqrt with number of threads: " << nbatch << endl;
+
   b.SetLength(n);
   b_inv.SetLength(n);
 
-  #pragma omp parallel for num_threads(nbatch)
+  #pragma omp parallel for num_threads(Param::NUM_THREADS)
   for (int i = 0; i < nbatch; i++) {
     int start = batch_size * i;
     int end = start + batch_size;
@@ -1710,16 +1715,21 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
 
   int n = a.length();
   int nbatch = Param::NUM_THREADS;
-  if (debug) cout << "FPDiv with number of threads: " << nbatch << endl;
   int batch_size = ceil(n / ((double) nbatch));
+  while (batch_size > Param::DIV_MAX_N) {
+    nbatch += Param::NUM_THREADS;
+    batch_size = ceil(n / ((double) nbatch));
+  }
   // there's an edge case where the ceiling operation creates a batch size such that we need fewer than nbatch threads
   // eg. n = 500, 64 threads creates a batch size of 8, but 8 * 63 = 504 > n so we only need 63 threads
   // solution is to reset nbatch after setting batch_size
   nbatch = ceil(n / ((double) batch_size));
 
+  if (debug) cout << "FPDiv with number of threads: " << Param::NUM_THREADS << endl;
+
   c.SetLength(n);
 
-  #pragma omp parallel for num_threads(nbatch)
+  #pragma omp parallel for num_threads(Param::NUM_THREADS)
   for (int i = 0; i < nbatch; i++) {
     int start = batch_size * i;
     int end = start + batch_size;

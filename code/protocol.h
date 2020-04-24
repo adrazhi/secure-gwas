@@ -1267,8 +1267,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           }
         }
 
-        if ((i + 1) % report_bsize == 0 || i == inner_n1 - 1) {
-          cout << "\t" << i+1 << " / " << inner_n1 << ", "; toc(); tic();
+        if ((i - offset + 1) % report_bsize == 0 || i - offset == inner_n1 - 1) {
+          cout << "\t" << (i - offset + 1) << " / " << inner_n1 << ", "; toc(); tic();
         }
       }
       inner_ifs.close();
