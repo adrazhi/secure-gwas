@@ -663,12 +663,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       cov[offset + j] = sub_cov[j];
     }
 
-    #pragma omp critical
-      cout << "pheno starting at " << (offset + 1) << ": ";
-      mpc.Print(sub_pheno, 3);
-      cout << "cov starting at " << (offset + 1) << ": ";
-      mpc.Print(sub_cov[0], 3); 
-
     inner_ifs.close();
   }
 
@@ -774,6 +768,11 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
                 miss = miss_mask;
               } else {
                 miss += miss_mask;
+              }
+
+              if (i == 0 && j == 0) {
+                cout << "miss at position 1: ";
+                mpc.Print(miss, 10);
               }
 
               // Add to running sum
