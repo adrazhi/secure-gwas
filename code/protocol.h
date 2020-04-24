@@ -2220,7 +2220,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     Mat<ZZ_p> Z_gram2;
     ifs.open(cache(pid, "Z_gram").c_str(), ios::binary);
     mpc.ReadFromFile(Z_gram2, ifs, kp, kp);
-    ifs.close()
+    ifs.close();
     Mat<ZZ_p> U2;
     Vec<ZZ_p> L2;
     mpc.EigenDecomp(U2, L2, Z_gram2);
