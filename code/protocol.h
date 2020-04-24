@@ -2210,7 +2210,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     if (Param::DEBUG) {
       for (int i = 0; i < k; i++) {
-        mpc.PrintFP(U[k], 5);
+        mpc.PrintFP(U[i], kp);
       }
       cout << "K eigenvalues" << endl;
       mpc.PrintFP(L, k);
