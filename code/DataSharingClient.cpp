@@ -73,10 +73,6 @@ bool send_stream(string data_dir, MPCEnv& mpc, int mode, long start_line, long n
       cout << "Error: data matrix does not have NUM_INDS rows" << endl;
       return false;
     }
-    if (i == 0) {
-      #pragma omp critical
-        cout << "Thread " << omp_get_thread_num() << "i: " << line.substr(0, 20) << endl;
-    }
     istringstream iss_geno(line);
 
     if (pheno_flag) {
