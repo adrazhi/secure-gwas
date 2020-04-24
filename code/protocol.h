@@ -732,6 +732,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
         if (pid > 0) {
           // Loop over all datasets to calculate missing rate across all individuals
+          cout << "initial gmiss: ";
+          mpc.Print(gmiss, 3);
+          
           #pragma omp parallel for num_threads(num_threads)
           for (int i = 0; i < num_datasets; i++) {
             long inner_n0 = Param::NUM_INDS[i];
@@ -770,10 +773,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
                 miss += miss_mask;
               }
 
-              if (j == 0) {
-                cout << "miss at position " << (1 + 36 * i) << ": ";
-                mpc.Print(miss, 10);
-              }
+              cout << "miss at position " << (1 + j + 36 * i) << ": ";
+              mpc.Print(miss, 3);
 
               // Add to running sum
               // Since gmiss is shared data, this operation must be atomic
