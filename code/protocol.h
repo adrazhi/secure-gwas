@@ -663,7 +663,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       cov[offset + j] = sub_cov[j];
     }
 
-    #pragma omp atomic
+    #pragma omp critical
       cout << "pheno starting at " << (offset + 1) << ": ";
       mpc.Print(sub_pheno, 3);
       cout << "cov starting at " << (offset + 1) << ": ";
