@@ -1134,7 +1134,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         inner_ind += Param::NUM_INDS[j];
       }
       long inner_n1 = n1_vec[dataset_idx];
-      for (int i = offset; i < offset + inner_n1; i++) {
+      for (int i = 0; i < inner_n1; i++) {
         inner_ind++;
 
         mpc.ProfilerPushState("file_io/rng");
@@ -1208,13 +1208,13 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         dosage[i % bsize] = g[1][i % bsize] + 2 * g[2][i % bsize];
         dosage_mask[i % bsize] = g_mask[1][i % bsize] + 2 * g_mask[2][i % bsize];
 
-        ctrl_vec[i % bsize] = ctrl[i];
-        ctrl_mask_vec[i % bsize] = ctrl_mask[i];
+        ctrl_vec[i % bsize] = ctrl[i + offset];
+        ctrl_mask_vec[i % bsize] = ctrl_mask[i + offset];
 
         // Update running sums - since these are shared by threads, each update must be atomic
         if (pid > 0) {
           #pragma omp critical ( ctrl_mask_update )
-            n1_ctrl += ctrl_mask[i];
+            n1_ctrl += ctrl_mask[i + offset];
           #pragma omp critical ( miss_mask_update )
             gmiss += miss_mask[i % bsize];
           #pragma omp critical ( dosage_mask_update )
@@ -1222,7 +1222,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
           if (pid == 1) {
             #pragma omp critical ( ctrl_update )
-              n1_ctrl += ctrl[i];
+              n1_ctrl += ctrl[i + offset];
             #pragma omp critical ( miss_update )
               gmiss += miss[i % bsize];
             #pragma omp critical ( dosage_update )
@@ -1230,9 +1230,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           }
         }
 
-        if ((i - offset) % bsize == bsize - 1 || (i - offset) == inner_n1 - 1) {
-          if ((i - offset) % bsize < bsize - 1) {
-            int new_bsize = ((i - offset) % bsize) + 1;
+        if (i % bsize == bsize - 1 || i == inner_n1 - 1) {
+          if (i % bsize < bsize - 1) {
+            int new_bsize = (i % bsize) + 1;
             for (int k = 0; k < 3; k++) {
               g[k].SetDims(new_bsize, m1);
               g_mask[k].SetDims(new_bsize, m1);
@@ -1267,8 +1267,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           }
         }
 
-        if ((i - offset + 1) % report_bsize == 0 || (i - offset) == inner_n1 - 1) {
-          cout << "\t" << (i - offset + 1) << " / " << inner_n1 << ", "; toc(); tic();
+        if (i % report_bsize == 0 || i == inner_n1 - 1) {
+          cout << "\t" << i << " / " << inner_n1 << ", "; toc(); tic();
         }
       }
       inner_ifs.close();
