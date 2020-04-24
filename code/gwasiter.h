@@ -5,7 +5,6 @@
 #include "assert.h"
 #include <vector>
 #include <NTL/mat_ZZ_p.h>
-#include <omp.h>
 
 using namespace std;
 
@@ -33,7 +32,6 @@ public:
     }
 
     cout << "Initialized GwasIterator" << endl;
-    cout << "OMP Thread Number: " << omp_get_thread_num() << endl;
   }
 
   void Terminate() {
