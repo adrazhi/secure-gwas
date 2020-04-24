@@ -195,11 +195,8 @@ int main(int argc, char** argv) {
   Param::Convert(round_str, Param::CUR_ROUND, "CUR_ROUND");
 
   // If not in chunked mode, Data Sharing code should not be multi-threaded
-  // Otherwise, set the number of threads to be the number of chunks
   if (!Param::CHUNK_MODE) {
     Param::NUM_THREADS = 1;
-  } else {
-    Param::NUM_THREADS = Param::NUM_CHUNKS[Param::CUR_ROUND];
   }
 
   string data_dir;
@@ -232,7 +229,10 @@ int main(int argc, char** argv) {
   }
 
   // divide up the dataset into chunks
-  int num_chunks = Param::NUM_THREADS;
+  int num_chunks = 1;
+  if (Param::CHUNK_MODE) {
+    num_chunks = Param::NUM_CHUNKS[Param::CUR_ROUND];
+  }
   long total_lines = Param::NUM_INDS[Param::CUR_ROUND];
   long chunk_size = ceil(total_lines / ((double) num_chunks));
   num_chunks = ceil(total_lines / ((double) chunk_size)); // this is necessary to avoid edge case due to ceiling operator
@@ -245,8 +245,8 @@ int main(int argc, char** argv) {
   ios_base::sync_with_stdio(false);
   bool success = true;
   if (pid < 3) {
-    #pragma omp parallel for num_threads(num_chunks)
-    for (int i = 0; i < Param::NUM_THREADS; i++) {
+    #pragma omp parallel for num_threads(Param::NUM_THREADS)
+    for (int i = 0; i < num_chunks; i++) {
       long start_line = chunk_size * i;
       long end_line = start_line + chunk_size;
       if (end_line > total_lines) {
@@ -262,8 +262,8 @@ int main(int argc, char** argv) {
       if (!inner_success) success = false;
     }
   } else {
-    #pragma omp parallel for num_threads(num_chunks)
-    for (int i = 0; i < Param::NUM_THREADS; i++) {
+    #pragma omp parallel for num_threads(Param::NUM_THREADS)
+    for (int i = 0; i < num_chunks; i++) {
       long start_line = chunk_size * i;
       long end_line = start_line + chunk_size;
       if (end_line > total_lines) {

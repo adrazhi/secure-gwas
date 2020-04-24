@@ -2216,6 +2216,26 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       mpc.PrintFP(L, k);
     }
 
+    // To Do: Remove this after testing
+    Mat<ZZ_p> Z_gram2;
+    ifs.open(cache(pid, "Z_gram").c_str(), ios::binary);
+    mpc.ReadFromFile(Z_gram2, ifs, kp, kp);
+    ifs.close()
+    Mat<ZZ_p> U2;
+    Vec<ZZ_p> L2;
+    mpc.EigenDecomp(U2, L2, Z_gram2);
+    Z_gram2.kill();
+    U2.SetDims(k, kp);
+    L2.SetLength(k);
+    cout << "Test: Other K eigenvectors" << endl;
+    if (Param::DEBUG) {
+      for (int i = 0; i < k; i++) {
+        mpc.PrintFP(U2[i], kp);
+      }
+      cout << "Test: Other K eigenvalues" << endl;
+      mpc.PrintFP(L2, k);
+    }
+
     // Recover singular vectors
     Mat<ZZ_p> U_mask;
     mpc.BeaverPartition(U_mask, U);
