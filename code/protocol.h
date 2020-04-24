@@ -770,8 +770,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
                 miss += miss_mask;
               }
 
-              if (i == 0 && j == 0) {
-                cout << "miss at position 1: ";
+              if (j == 0) {
+                cout << "miss at position " << (1 + 36 * i) << ": ";
                 mpc.Print(miss, 10);
               }
 
