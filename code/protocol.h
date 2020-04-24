@@ -1230,7 +1230,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           }
         }
 
-        if (i % bsize == bsize - 1 || i == inner_n1 - 1) {
+        if ((i - offset) % bsize == bsize - 1 || (i - offset) == inner_n1 - 1) {
           if (i % bsize < bsize - 1) {
             int new_bsize = (i % bsize) + 1;
             for (int k = 0; k < 3; k++) {
@@ -1267,7 +1267,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           }
         }
 
-        if ((i - offset + 1) % report_bsize == 0 || i - offset == inner_n1 - 1) {
+        if ((i - offset + 1) % report_bsize == 0 || (i - offset) == inner_n1 - 1) {
           cout << "\t" << (i - offset + 1) << " / " << inner_n1 << ", "; toc(); tic();
         }
       }
@@ -1739,7 +1739,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         dosage[i] = g[1] + 2 * g[2];
         dosage_mask[i] = g_mask[1] + 2 * g_mask[2];
 
-        if ((i + 1) % bsize == 0 || i == n1 - 1) {
+        if ((i - offset + 1) % bsize == 0 || (i - offset) == inner_n1 - 1) {
           cout << "\t" << i+1 << " / " << n1 << ", "; toc(); tic();
         }
       }
