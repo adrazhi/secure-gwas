@@ -2189,8 +2189,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     if (Param::DEBUG) {
       cout << "Z_gram" << endl;
-      for (int i = 0; i < kp; i++) {
-        mpc.PrintFP(Z_gram[i], kp);
+      for (int i = 0; i < 3; i++) {
+        mpc.PrintFP(Z_gram[i], 5);
       }
     }
 
@@ -2209,11 +2209,11 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     mpc.ProfilerPopState(false); // eigen_solve
 
     if (Param::DEBUG) {
-      for (int i = 0; i < k; i++) {
-        mpc.PrintFP(U[i], kp);
+      for (int i = 0; i < 3; i++) {
+        mpc.PrintFP(U[i], 5);
       }
-      cout << "K eigenvalues" << endl;
-      mpc.PrintFP(L, k);
+      cout << "Eigenvalues" << endl;
+      mpc.PrintFP(L, 5);
     }
 
     // Recover singular vectors
