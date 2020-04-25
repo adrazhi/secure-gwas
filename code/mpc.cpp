@@ -1758,7 +1758,7 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   assert(a.length() == b.length());
 
   if (Param::NUM_THREADS == 1) {
-    FPDiv(b, b_inv, a);
+    FPDiv(c, a, b);
     return;
   }
   int n = a.length();
