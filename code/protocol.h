@@ -2472,7 +2472,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     }
 
     ind = -1;
-    rolling_n1 = 0;
+    long rolling_n1 = 0;
     tic();
     mpc.ProfilerPushState("file_io/rng");
     cout << "GWAS pass:" << endl;
@@ -2487,7 +2487,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         }
       }
 
-      sub_n1 = n1_vec[dataset_idx];
+      long sub_n1 = n1_vec[dataset_idx];
       for (int cur = rolling_n1; cur < rolling_n1 + sub_n1; cur++) {
         ind++;
 
