@@ -2633,7 +2633,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       #pragma omp critical ( sx_update )
         sx += inner_sx;
       #pragma omp critical ( sxp_update )
-        sxp += inner_sx;
+        sxp += inner_sxp;
       #pragma omp critical ( sxx_update )
         sxx += inner_sxx;
       #pragma omp critical ( B_update )
