@@ -357,6 +357,7 @@ void MPCEnv::CleanUp() {
 
 void MPCEnv::ProfilerResetTimer() {
   if (!Param::PROFILER) return;
+  if (omp_get_thread_num() > 0) return; // only profile main thread (To Do: change this later?)
 
   vector<uint64_t> stat(5, 0);
 
@@ -393,6 +394,7 @@ void MPCEnv::ProfilerResetTimer() {
 
 void MPCEnv::ProfilerPushState(string desc) {
   if (!Param::PROFILER) return;
+  if (omp_get_thread_num() > 0) return; // only profile main thread (To Do: change this later?)
 
   assert(desc != "");
 
@@ -410,6 +412,7 @@ void MPCEnv::ProfilerPushState(string desc) {
 
 void MPCEnv::ProfilerPopState(bool write) {
   if (!Param::PROFILER) return;
+  if (omp_get_thread_num() > 0) return; // only profile main thread (To Do: change this later?)
 
   assert(pstate.top() != "");
 
@@ -424,6 +427,7 @@ void MPCEnv::ProfilerPopState(bool write) {
 
 void MPCEnv::ProfilerWriteToFile() {
   if (!Param::PROFILER) return;
+  if (omp_get_thread_num() > 0) return; // only profile main thread (To Do: change this later?)
 
   ProfilerResetTimer();
   

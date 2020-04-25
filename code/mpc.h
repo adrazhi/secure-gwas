@@ -1425,10 +1425,19 @@ private:
   Vec< Mat<ZZ_p> > lagrange_cache;
   map<int, ZZ_p> invpow_cache;
 
+  // TO DO: Profiler and logging variables must eventually be made thread-safe
+  // Then the corresponding profiling/logging functions could be made multi-threaded
+  // As of now, the work-around is to have just one shared copy of these variables
+  // To avoid race conditions, only thread 0 (the main thread) actually executes profiling/logging functions
+
   /* Profiler data */
   stack<string> pstate;
   map<string, int> ptable_index;
   vector< pair<string, vector<uint64_t> > > ptable;
+
+  /* Logging */
+  ofstream logfs;
+  chrono::time_point<chrono::steady_clock> clock_start;
 
   /* Lagrange coefficient cache for OR functions */
   map<pair<int, int>, Vec<ZZ> > or_lagrange_cache;
@@ -1446,10 +1455,6 @@ private:
   Vec<uint32_t> ZZ_bytes;
   Vec<uint32_t> ZZ_bits;
   Vec<uint64_t> ZZ_per_buf;
-
-  /* Logging */
-  ofstream logfs;
-  chrono::time_point<chrono::steady_clock> clock_start;
 
   /* File IO */
   void Write(Vec<ZZ_p>& a, fstream& ofs);
