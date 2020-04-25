@@ -87,7 +87,6 @@ int main(int argc, char** argv) {
     int num_threads = stoi(num_threads_str);
     Param::NUM_THREADS = num_threads;
   }
-  Param::NUM_THREADS = 1; // comment this out once we make GWAS parallel
   cout << "Number of threads: " << Param::NUM_THREADS << endl;
 
   vector< pair<int, int> > pairs;
