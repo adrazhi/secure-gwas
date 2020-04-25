@@ -2750,7 +2750,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     mpc.ProfilerPushState("sqrt");
     mpc.FPSqrtParallel(tmp_vec, denom1_sqrt_inv, denom);
     mpc.ProfilerPopState(false); // sqrt
-    coout << "done. "; toc();
+    cout << "done. "; toc();
 
     fs.open(cache(pid, "denom_inv").c_str(), ios::out | ios::binary);
     if (pid > 0) {
