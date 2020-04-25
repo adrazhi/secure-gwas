@@ -179,9 +179,10 @@ int main(int argc, char** argv) {
 
     // Profile IsPositiveParallel
     if (ispos) {
+      Vec<ZZ_p> input = a - b;
       gettimeofday(&start, NULL); 
       ios_base::sync_with_stdio(false);
-      mpc.IsPositiveParallel(c1, a-b);
+      mpc.IsPositiveParallel(c1, input);
       gettimeofday(&end, NULL);
       mpc.RevealSym(c1);
 
