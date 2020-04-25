@@ -123,10 +123,10 @@ int main(int argc, char** argv) {
   double runtime;
 
   // output flags
-  bool fpdiv = true;
-  bool fpsqrt = true;
+  bool fpdiv = false;
+  bool fpsqrt = false;
   bool ispos = true;
-  bool print_output = true;
+  bool print_output = false;
 
   for (int i = 0; i < num_threads.size(); i++) {
     Param::NUM_THREADS = num_threads[i];
@@ -174,6 +174,7 @@ int main(int argc, char** argv) {
           print_ntl_vec("Square Root Result 1", c1_base, 5);
           print_ntl_vec("Square Root Result 2", c2_base, 5);
         }
+        cout << endl;
       }
     }
 
@@ -194,6 +195,7 @@ int main(int argc, char** argv) {
         cout << " sec" << endl;
       }
       if (print_output) {
+        cout << "IsPositive Result: ";
         mpc.Print(c1, 5);
       }
     }
