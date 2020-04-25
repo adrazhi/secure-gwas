@@ -73,12 +73,17 @@ public:
 
   // Assumes a is strictly positive and NBIT_K - NBIT_F is even
   void FPSqrt(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a);
-  void FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a);
 
   // Assumes b is strictly positive
   void FPDiv(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b);
-  void FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b);
   // void FPDivBase(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b);
+
+  // Optimized (multi-threaded) versions of expensive long-vector subroutines
+  // These indirectly also enable speed ups in the following routines:
+  // (Not)LessThan(Public), Householder, QRFactSquare, OrthonormalBasis, Tridiag, EigenDecomp, NegLogSigmoid
+  void FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b);
+  void FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a);
+  void IsPositiveParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& a);
 
   // k is the bit-length of the underlying data range
   // m is the number of bits to truncate

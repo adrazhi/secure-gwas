@@ -651,7 +651,7 @@ void MPCEnv::NegLogSigmoid(Vec<ZZ_p>& b, Vec<ZZ_p>& b_grad, Vec<ZZ_p>& a) {
 
   for (int i = 0; i < depth; i++) {
     Vec<ZZ_p> cur_sign;
-    IsPositive(cur_sign, cur);
+    IsPositiveParallel(cur_sign, cur);
 
     ZZ_p index_step(1 << (depth - 1 - i));
 
@@ -736,14 +736,14 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   Trunc(xdot);
 
   Vec<ZZ_p> xnorm, dummy;
-  FPSqrt(xnorm, dummy, xdot);
+  FPSqrtParallel(xnorm, dummy, xdot);
 
   Vec<ZZ_p> x1;
   x1.SetLength(1);
   x1[0] = x[0];
 
   Vec<ZZ_p> x1sign;
-  IsPositive(x1sign, x1);
+  IsPositiveParallel(x1sign, x1);
 
   x1sign *= 2;
   if (pid == 1) {
@@ -768,7 +768,7 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   }
 
   Vec<ZZ_p> vnorm_inv;
-  FPSqrt(dummy, vnorm_inv, vdot);
+  FPSqrtParallel(dummy, vnorm_inv, vdot);
 
   ZZ_p invr, invm;
   BeaverPartition(invr, invm, vnorm_inv[0]);
@@ -1299,7 +1299,7 @@ void MPCEnv::LessThan(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   }
 
   // a - b >= 0?
-  IsPositive(c, a_cpy);
+  IsPositiveParallel(c, a_cpy);
   FlipBit(c);
 }
 
@@ -1316,7 +1316,7 @@ void MPCEnv::LessThanPublic(Vec<ZZ_p>& c, Vec<ZZ_p>& a, ZZ_p bpub) {
   }
 
   // a - b >= 0?
-  IsPositive(c, a_cpy);
+  IsPositiveParallel(c, a_cpy);
   FlipBit(c);
 }
 
@@ -1415,6 +1415,53 @@ void MPCEnv::IsPositive(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
   TableLookup(b_mat, lsb, 0, fid);
 
   b = b_mat[0];
+}
+
+void MPCEnv::IsPositiveParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
+  if (Param::NUM_THREADS == 1) {
+    IsPositive(b, a);
+    return;
+  }
+  int n = a.length();
+  int nbatch = Param::NUM_THREADS;
+  int batch_size = ceil(n / ((double) nbatch));
+  while (batch_size > Param::DIV_MAX_N) {
+    nbatch += Param::NUM_THREADS;
+    batch_size = ceil(n / ((double) nbatch));
+  }
+  // there's an edge case where the ceiling operation creates a batch size such that we need fewer than nbatch threads
+  // eg. n = 500, 64 threads creates a batch size of ceil(500/64) = 8, but 8 * 63 = 504 > n so we only need 63 threads
+  // solution is to reset nbatch after setting batch_size
+  nbatch = ceil(n / ((double) batch_size));
+
+  if (debug) cout << "IsPositive with number of threads: " << nbatch << endl;
+
+  b.SetLength(n);
+
+  #pragma omp parallel for num_threads(Param::NUM_THREADS)
+  for (int i = 0; i < nbatch; i++) {
+    int start = batch_size * i;
+    int end = start + batch_size;
+    if (end > n) {
+      end = n;
+    }
+    int chunk_size = end - start;
+
+    // avoid error by re-setting the modulus
+    ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+    ZZ_p::init(base_p);
+
+    Vec<ZZ_p> a_copy;
+    a_copy.SetLength(chunk_size);
+    for (int j = 0; j < chunk_size; j++) {
+      a_copy[j] = a[start + j];
+    }
+    Vec<ZZ_p> b_copy;
+    IsPositive(b_copy, a_copy);
+    for (int j = 0; j < chunk_size; j++) {
+      b[start + j] = b_copy[j];
+    }
+  }
 }
 
 void MPCEnv::FlipBit(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
@@ -1539,6 +1586,10 @@ void MPCEnv::FPSqrt(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
 
 // Assumes Param::NBIT_K - NBIT_F is even
 void MPCEnv::FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
+  if (Param::NUM_THREADS == 1) {
+    FPSqrt(b, b_inv, a);
+    return;
+  }
   int n = a.length();
   int nbatch = Param::NUM_THREADS;
   int batch_size = ceil(n / ((double) nbatch));
@@ -1706,6 +1757,10 @@ void MPCEnv::FPDiv(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
 void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   assert(a.length() == b.length());
 
+  if (Param::NUM_THREADS == 1) {
+    FPDiv(b, b_inv, a);
+    return;
+  }
   int n = a.length();
   int nbatch = Param::NUM_THREADS;
   int batch_size = ceil(n / ((double) nbatch));

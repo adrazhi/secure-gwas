@@ -53,8 +53,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  vector<int> num_threads{ 8, 16 };
-  Param::NUM_THREADS = 16;
+  vector<int> num_threads{ 1, 2, 4, 8, 16 };
+  Param::NUM_THREADS = 16; // need this so that mpc.Initialize will create enough channels/prgs for up to 16 threads
 
   string n_str(argv[3]);
   long n = stoi(n_str);
@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
   }
   // mpc.SetDebug(true);
 
-  // Initialize vectors to hold inputs and outputs of division protocol
+  // Initialize vectors to hold inputs and outputs of parallel subroutines
   Vec<ZZ_p> a, b, c1, c2;
   Init(a, n);
   Init(b, n);
@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
     mpc.RestoreSeed();
   } else if (pid == 2) {
     // Generate vectors of random doubles to simulate data
-    std::uniform_real_distribution<double> unif(1, 10);
+    std::uniform_real_distribution<double> unif(-10, 10);
     std::default_random_engine re;
     auto rand_dbl = std::bind(unif, re);
     vector<double> a_base, b_base;
@@ -123,42 +123,15 @@ int main(int argc, char** argv) {
   double runtime;
 
   // output flags
-  bool data_transfer = false;
   bool fpdiv = true;
   bool fpsqrt = true;
-  bool print_output = false;
+  bool ispos = true;
+  bool print_output = true;
 
   for (int i = 0; i < num_threads.size(); i++) {
     Param::NUM_THREADS = num_threads[i];
     cout << "-----------------" << endl;
     cout << "Number of Threads: " << Param::NUM_THREADS << endl;
-
-    // Profile Data Transfer
-    if (data_transfer) {
-      int sub_n = n / num_threads[i];
-      Mat<ZZ_p> X;
-      Init(X, num_threads[i], sub_n);
-      if (pid == 2) {
-        mpc.RandMat(X, num_threads[i], sub_n);
-        gettimeofday(&start, NULL); 
-        ios_base::sync_with_stdio(false);
-        #pragma omp parallel for num_threads(num_threads[i]) 
-        for (int j = 0; j < num_threads[i]; j++) {
-          mpc.SendVec(X[j], 0);
-        }
-        gettimeofday(&end, NULL);
-
-        runtime = (end.tv_sec - start.tv_sec) * 1e6;
-        runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-        cout << "Data Transfer Runtime: " << fixed << runtime << setprecision(6); 
-        cout << " sec" << endl;
-      } else if (pid == 0) {
-        #pragma omp parallel for num_threads(num_threads[i]) 
-        for (int j = 0; j < num_threads[i]; j++) {
-          mpc.ReceiveVec(X[j], 2, sub_n);
-        }
-      }
-    }
 
     // Profile FPDivParallel
     if (fpdiv) {
@@ -201,6 +174,26 @@ int main(int argc, char** argv) {
           print_ntl_vec("Square Root Result 1", c1_base, 5);
           print_ntl_vec("Square Root Result 2", c2_base, 5);
         }
+      }
+    }
+
+    // Profile IsPositiveParallel
+    if (fpdiv) {
+      gettimeofday(&start, NULL); 
+      ios_base::sync_with_stdio(false);
+      mpc.IsPositiveParallel(c1, a);
+      gettimeofday(&end, NULL);
+      mpc.RevealSym(c1);
+
+      // Print results
+      runtime = (end.tv_sec - start.tv_sec) * 1e6;
+      runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
+      if (pid == 2) {
+        cout << "IsPositive Runtime: " << fixed << runtime << setprecision(6); 
+        cout << " sec" << endl;
+      }
+      if (print_output) {
+        mpc.Print(c1, 5);
       }
     }
   }
