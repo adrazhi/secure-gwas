@@ -258,8 +258,7 @@ int main(int argc, char** argv) {
       ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
       ZZ_p::init(base_p);
 
-      bool inner_success = data_sharing_protocol(mpc, pid, num_lines, i);
-      if (!inner_success) success = false;
+      success = data_sharing_protocol(mpc, pid, num_lines, i);
     }
   } else {
     #pragma omp parallel for num_threads(Param::NUM_THREADS)
@@ -279,7 +278,7 @@ int main(int argc, char** argv) {
       int signal = mpc.ReceiveInt(1);
 
       while (signal != GwasIterator::TERM_CODE) {
-        bool inner_success = send_stream(data_dir, mpc, signal, start_line, num_lines);
+        success = send_stream(data_dir, mpc, signal, start_line, num_lines);
         signal = mpc.ReceiveInt(1);
       }
     }
