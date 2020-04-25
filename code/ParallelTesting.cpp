@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
     mpc.RestoreSeed();
   } else if (pid == 2) {
     // Generate vectors of random doubles to simulate data
-    std::uniform_real_distribution<double> unif(-10, 10);
+    std::uniform_real_distribution<double> unif(1, 10);
     std::default_random_engine re;
     auto rand_dbl = std::bind(unif, re);
     vector<double> a_base, b_base;
@@ -178,10 +178,10 @@ int main(int argc, char** argv) {
     }
 
     // Profile IsPositiveParallel
-    if (fpdiv) {
+    if (ispos) {
       gettimeofday(&start, NULL); 
       ios_base::sync_with_stdio(false);
-      mpc.IsPositiveParallel(c1, a);
+      mpc.IsPositiveParallel(c1, a-b);
       gettimeofday(&end, NULL);
       mpc.RevealSym(c1);
 
