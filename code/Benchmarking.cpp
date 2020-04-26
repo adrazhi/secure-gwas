@@ -24,18 +24,8 @@ using namespace std;
 using msec = chrono::milliseconds;
 using get_time = chrono::steady_clock;
 
-auto clock_start = get_time::now();
-
-void tic() {
-  clock_start = get_time::now();
-}
-
-int toc() {
-  auto clock_end = get_time::now();
-  int duration = chrono::duration_cast<msec>(clock_end - clock_start).count();
-  cout << "Elapsed time is " << duration / 1000.0 << " secs" << endl;
-  return duration;
-}
+// using tic, toc, and clock_start from protocol.h for profiling
+clock_start = get_time::now();
 
 int main(int argc, char** argv) {
   if (argc < 3) {
