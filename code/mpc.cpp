@@ -937,7 +937,7 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   for (int i = 0; i < c; i++) {
     Mat<ZZ_p> v;
     v.SetDims(1, Ap.NumCols());
-    cout << "Householder ... " << i; tick();
+    cout << "Householder ... "; tick();
     Householder(v[0], Ap[0]); tock();
 
     if (pid == 0) {
@@ -953,12 +953,12 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       transpose(vt, v);
     }
 
-    cout << "Multiplication ... " << i; tick();
+    cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Apv;
     MultMat(Apv, Ap, vt);
     Trunc(Apv); tock();
 
-    cout << "Multiplication ... " << i; tick();
+    cout << "Multiplication ... "; tick();
     Mat<ZZ_p> B;
     MultMat(B, Apv, v);
     Trunc(B); tock();
@@ -967,7 +967,6 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       B += Ap;
     }
 
-    cout << "Data Copy ... " << i; tick();
     Ap.SetDims(B.NumRows() - 1, B.NumCols() - 1);
     if (pid > 0) {
       for (int j = 0; j < B.NumRows() - 1; j++) {
@@ -976,7 +975,6 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
         }
       }
     }
-    tock();
   }
 
   Q.SetDims(c, n);
@@ -988,6 +986,8 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       }
     }
   }
+
+  cout << "second loop" << endl;
 
   for (int i = c - 1; i >= 0; i--) {
     Mat<ZZ_p> v;
@@ -1013,12 +1013,12 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       }
     }
 
-    cout << "Multiplication ... " << i; tick();
+    cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Qv;
     MultMat(Qv, Qsub, vt);
     Trunc(Qv); tock();
 
-    cout << "Multiplication ... " << i; tick();
+    cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Qvv;
     MultMat(Qvv, Qv, v);
     Trunc(Qvv); tock();
@@ -1026,7 +1026,6 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       Qvv *= -2;
     }
 
-    cout << "Data Copy ... " << i; tick();
     if (pid > 0) {
       for (int j = 0; j < c; j++) {
         for (int k = 0; k < n - i; k++) {
@@ -1034,7 +1033,6 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
         }
       }
     }
-    tock();
   }
 }
 

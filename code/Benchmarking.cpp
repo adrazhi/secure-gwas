@@ -101,8 +101,8 @@ int main(int argc, char** argv) {
   // tic(); mpc.OrthonormalBasis(Q, Y1); toc();
   // tic(); mpc.OrthonormalBasis(Q, Y2); toc();
   // tic(); mpc.OrthonormalBasis(Q, Y3); toc();
-  mpc.OrthonormalBasis(Q, Y2);
-  cout << "-----------" << endl;
+  // mpc.OrthonormalBasis(Q, Y1);
+  // cout << "-----------" << endl;
   mpc.OrthonormalBasis(Q, Y2);
 
   mpc.CleanUp();
