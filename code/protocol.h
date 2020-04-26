@@ -1089,7 +1089,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   } else {
     cout << "Taking a pass to calculate genotype statistics:" << endl;
 
-    long bsize = Param::PITER_BATCH_SIZE;
+    long bsize = Param::PITER_BATCH_SIZE / num_threads;
     long report_bsize = n1 / 10;
 
     // Loop over all datasets to calculate genotype statistics over all individuals
@@ -2434,7 +2434,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   } else {
 
-    long bsize = Param::PITER_BATCH_SIZE;
+    long bsize = Param::PITER_BATCH_SIZE / num_threads;
 
     mpc.Transpose(V); // n1-by-(k + NUM_COVS)
     transpose(V_mask, V_mask);
