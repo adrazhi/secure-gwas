@@ -123,8 +123,8 @@ int main(int argc, char** argv) {
   double runtime;
 
   // output flags
-  bool fpdiv = false;
-  bool fpsqrt = false;
+  bool fpdiv = true;
+  bool fpsqrt = true;
   bool ispos = true;
   bool print_output = false;
 
