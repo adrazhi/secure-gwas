@@ -127,8 +127,8 @@ int main(int argc, char** argv) {
   mpc.OrthonormalBasis(Q, Y2);
 
   mpc.FastMultMat(C, A, B);
-  mpc.print(C[0], 2);
-  mpc.print(C[1], 2);
+  mpc.Print(C[0], 2);
+  mpc.Print(C[1], 2);
 
   mpc.CleanUp();
 
