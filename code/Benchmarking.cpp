@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   Init(Y2, 15, 10000);
   Init(Y3, 15, 100000);
 
-  Mat<ZZ_P> A, B, C;
+  Mat<ZZ_p> A, B, C;
   Init(A, 2, 2);
   Init(B, 2, 2);
 
