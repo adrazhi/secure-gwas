@@ -47,6 +47,8 @@ public:
   void QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A);
   // Optimized for memory (need to call this on a large matrix)
   void OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A);
+  // Optimized (multi-threaded) version
+  void OrthonormalBasisParallel(Mat<ZZ_p>& Q, Mat<ZZ_p>& A);
   void Tridiag(Mat<ZZ_p>& T, Mat<ZZ_p>& Q, Mat<ZZ_p>& A);
   void EigenDecomp(Mat<ZZ_p>& V, Vec<ZZ_p>& L, Mat<ZZ_p>& A);
 
@@ -107,6 +109,10 @@ public:
   void Trunc(Mat<ZZ_p>& a) { Trunc(a, Param::NBIT_K + Param::NBIT_F, Param::NBIT_F); }
   void Trunc(Vec<ZZ_p>& a) { Trunc(a, Param::NBIT_K + Param::NBIT_F, Param::NBIT_F); }
   void Trunc(ZZ_p& a) { Trunc(a, Param::NBIT_K + Param::NBIT_F, Param::NBIT_F); }
+
+  // Optimized (multi-threaded) version of expensive matrix routines
+  void FastTrunc(Mat<ZZ_p>& a, int k, int m);
+  void FastTrunc(Mat<ZZ_p>& a) {FastTrunc(a, Param::NBIT_K + Param::NBIT_F, Param::NBIT_F); }
 
   // Returns shares of 2^(2t) where (2t or 2t+1) = NBIT_K - (bit-length of a number in a)
   // b_sqrt contains 2^t
@@ -1015,6 +1021,9 @@ public:
     MultAux(c, a, b, false, fid);
   }
 
+  // Optimized (multi-threaded) version of regular matrix multiplication used to speed up OrthonormalBasis
+  void FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b);
+
   template<class T>
   void MultMatParallel(Vec< Mat<T> >& c, Vec< Mat<T> >& a, Vec< Mat<T> >& b, int fid = 0) {
     MultAuxParallel(c, a, b, false, fid);
@@ -1482,6 +1491,28 @@ private:
 
     Init(c, out_rows, out_cols);
     BeaverMult(c, ar, am, br, bm, elem_wise, fid);
+    
+    BeaverReconstruct(c, fid);
+  }
+  // Optimized (multi-threaded) version
+  template<class T>
+  void FastMultAux(Mat<T>& c, Mat<T>& a, Mat<T>& b, bool elem_wise, int fid = 0) {
+    if (debug) cout << "FastMultAux: (" << a.NumRows() << ", " << a.NumCols() << "), (" << b.NumRows() << ", " << b.NumCols() << ")" << endl;
+    if (elem_wise) {
+      assert(a.NumRows() == b.NumRows() && a.NumCols() == b.NumCols());
+    } else {
+      assert(a.NumCols() == b.NumRows());
+    }
+
+    int out_rows = a.NumRows();
+    int out_cols = elem_wise ? a.NumCols() : b.NumCols();
+
+    Mat<T> ar, am, br, bm;
+    BeaverPartition(ar, am, a, fid);
+    BeaverPartition(br, bm, b, fid);
+
+    Init(c, out_rows, out_cols);
+    FastBeaverMult(c, ar, am, br, bm, elem_wise, fid);
     
     BeaverReconstruct(c, fid);
   }

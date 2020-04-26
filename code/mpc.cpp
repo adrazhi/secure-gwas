@@ -1038,6 +1038,137 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   }
 }
 
+void OrthonormalBasisParallel(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
+  if (debug) cout << "OrthonormalBasis: " << A.NumRows() << ", " << A.NumCols() << endl;
+  if (Param::NUM_THREADS == 1) {
+    OrthonormalBasis(Q, A);
+    return;
+  }
+
+  assert(A.NumCols() >= A.NumRows());
+
+  int c = A.NumRows();
+  int n = A.NumCols();
+
+  Vec< Vec<ZZ_p> > v_list;
+  v_list.SetLength(c);
+
+  Mat<ZZ_p> Ap;
+  if (pid == 0) {
+    Ap.SetDims(c, n);
+  } else {
+    Ap = A;
+  }
+
+  ZZ_p one;
+  DoubleToFP(one, 1, Param::NBIT_K, Param::NBIT_F);
+
+  for (int i = 0; i < c; i++) {
+    Mat<ZZ_p> v;
+    v.SetDims(1, Ap.NumCols());
+    cout << "Householder ... "; tick();
+    Householder(v[0], Ap[0]); tock();
+
+    if (pid == 0) {
+      v_list[i].SetLength(Ap.NumCols());
+    } else {
+      v_list[i] = v[0];
+    }
+
+    Mat<ZZ_p> vt;
+    if (pid == 0) {
+      vt.SetDims(Ap.NumCols(), 1);
+    } else {
+      transpose(vt, v);
+    }
+
+    cout << "Multiplication ... "; tick();
+    Mat<ZZ_p> Apv;
+    MultMat(Apv, Ap, vt); tock();
+    cout << "Trunc ... "; tick();
+    FastTrunc(Apv); tock();
+
+    cout << "Multiplication ... "; tick();
+    Mat<ZZ_p> B;
+    MultMat(B, Apv, v); tock();
+    cout << "Trunc ... "; tick();
+    FastTrunc(B); tock();
+    if (pid > 0) {
+      B *= -2;
+      B += Ap;
+    }
+
+    Ap.SetDims(B.NumRows() - 1, B.NumCols() - 1);
+    if (pid > 0) {
+      for (int j = 0; j < B.NumRows() - 1; j++) {
+        for (int k = 0; k < B.NumCols() - 1; k++) {
+          Ap[j][k] = B[j+1][k+1];
+        }
+      }
+    }
+  }
+
+  Q.SetDims(c, n);
+  if (pid > 0) {
+    clear(Q);
+    if (pid == 1) {
+      for (int i = 0; i < c; i++) {
+        Q[i][i] = one;
+      }
+    }
+  }
+
+  cout << "second loop" << endl;
+
+  for (int i = c - 1; i >= 0; i--) {
+    Mat<ZZ_p> v;
+    v.SetDims(1, v_list[i].length());
+    if (pid > 0) {
+      v[0] = v_list[i];
+    }
+
+    Mat<ZZ_p> vt;
+    if (pid == 0) {
+      vt.SetDims(v.NumCols(), 1);
+    } else {
+      transpose(vt, v);
+    }
+
+    Mat<ZZ_p> Qsub;
+    Qsub.SetDims(c, n - i);
+    if (pid > 0) {
+      for (int j = 0; j < c; j++) {
+        for (int k = 0; k < n - i; k++) {
+          Qsub[j][k] = Q[j][k+i];
+        }
+      }
+    }
+
+    cout << "Multiplication ... "; tick();
+    Mat<ZZ_p> Qv;
+    MultMat(Qv, Qsub, vt); tock();
+    cout << "Trunc ... "; tick();
+    FastTrunc(Qv); tock();
+
+    cout << "Multiplication ... "; tick();
+    Mat<ZZ_p> Qvv;
+    MultMat(Qvv, Qv, v); tock();
+    cout << "Trunc ... "; tick();
+    FastTrunc(Qvv); tock();
+    if (pid > 0) {
+      Qvv *= -2;
+    }
+
+    if (pid > 0) {
+      for (int j = 0; j < c; j++) {
+        for (int k = 0; k < n - i; k++) {
+          Q[j][k+i] += Qvv[j][k];
+        }
+      }
+    }
+  }
+}
+
 void MPCEnv::Tridiag(Mat<ZZ_p>& T, Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   if (debug) cout << "Tridiag: " << A.NumRows() << ", " << A.NumCols() << endl;
 
@@ -1915,6 +2046,92 @@ void MPCEnv::Trunc(Mat<ZZ_p>& a, int k, int m) {
   }
 }
 
+void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
+  if (debug) cout << "Trunc: " << a.NumRows() << ", " << a.NumCols() << endl;
+  if (Param::NUM_THREADS == 1) {
+    Trunc(a, k, m);
+    return;
+  }
+
+  Mat<ZZ_p> r;
+  Mat<ZZ_p> r_low;
+  if (pid == 0) {
+    RandMatBits(r, a.NumRows(), a.NumCols(), k + Param::NBIT_V);
+
+    r_low.SetDims(a.NumRows(), a.NumCols());
+    int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
+    #pragma omp parallel for num_threads(num_threads)
+    for (int i = 0; i < a.NumRows(); i++) {
+      for (int j = 0; j < a.NumCols(); j++) {
+        r_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(r[i][j]), m));
+      }
+    }
+
+    Mat<ZZ_p> r_mask;
+    Mat<ZZ_p> r_low_mask;
+    SwitchSeed(1);
+    RandMat(r_mask, a.NumRows(), a.NumCols());
+    RandMat(r_low_mask, a.NumRows(), a.NumCols());
+    RestoreSeed();
+
+    r -= r_mask;
+    r_low -= r_low_mask;
+
+    SendMat(r, 2);
+    SendMat(r_low, 2);
+  } else if (pid == 2) {
+    ReceiveMat(r, 0, a.NumRows(), a.NumCols());
+    ReceiveMat(r_low, 0, a.NumRows(), a.NumCols());
+  } else {
+    SwitchSeed(0);
+    RandMat(r, a.NumRows(), a.NumCols());
+    RandMat(r_low, a.NumRows(), a.NumCols());
+    RestoreSeed();
+  }
+
+  Mat<ZZ_p> c;
+  if (pid > 0) {
+    c = a + r;
+  } else {
+    c.SetDims(a.NumRows(), a.NumCols());
+  }
+
+  RevealSym(c);
+  
+  Mat<ZZ_p> c_low;
+  c_low.SetDims(a.NumRows(), a.NumCols());
+  if (pid > 0) {
+    int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
+    #pragma omp parallel for num_threads(num_threads)
+    for (int i = 0; i < a.NumRows(); i++) {
+      for (int j = 0; j < a.NumCols(); j++) {
+        c_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(c[i][j]), m));
+      }
+    }
+  }
+
+  if (pid > 0) {
+    a += r_low;
+    if (pid == 1) {
+      a -= c_low;
+    }
+
+    ZZ_p twoinvm;
+    map<int, ZZ_p>::iterator it = invpow_cache.find(m);
+    if (it == invpow_cache.end()) {
+      ZZ_p two(2);
+      ZZ_p twoinv;
+      inv(twoinv, two);
+      power(twoinvm, twoinv, m);
+      invpow_cache[m] = twoinvm;
+    } else {
+      twoinvm = it->second;
+    }
+
+    a *= twoinvm;
+  }
+}
+
 void MPCEnv::PrefixOr(Mat<ZZ>& b, Mat<ZZ>& a, int fid) {
   if (debug) cout << "PrefixOr: " << a.NumRows() << ", " << a.NumCols() << endl;
 
@@ -2732,3 +2949,34 @@ void MPCEnv::BeaverMult(Mat<ZZ>& ab, Mat<ZZ>& ar, Mat<ZZ>& am, Mat<ZZ>& br, Mat<
 
   Mod(ab, fid);
 }
+
+void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
+  if (Param::NUM_THREADS == 1) {
+    MultMat(c, a, b);
+    return;
+  }
+  int out_rows = a.NumRows();
+  int out_cols = b.NumCols();
+
+  if (debug) cout << "FastMultMat: (" << out_rows << ", " << a.NumCols() << "), (" << b.NumRows() << ", " << out_cols << ")" << endl;
+
+  Mat<ZZ_p> ar, am, br, bm;
+  BeaverPartition(ar, am, a, 0);
+  BeaverPartition(br, bm, b, 0);
+
+  Init(c, out_rows, out_cols);
+  if (pid == 0) {
+    Mat<ZZ_p> ambm;
+    mul(ambm, am, bm);
+    c += ambm;
+  } else {
+    c += ar * bm;
+    c += am * br;
+    if (pid == 1) {
+      c += ar * br;
+    }
+  }
+  
+  BeaverReconstruct(c, 0);
+}
+

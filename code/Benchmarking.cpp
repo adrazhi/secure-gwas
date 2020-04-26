@@ -65,11 +65,14 @@ int main(int argc, char** argv) {
   // mpc.SetDebug(true);
 
   // Initialize matrices to hold inputs and outputs
-  Mat<ZZ_p> Y1, Y2, Y3;
+  Mat<ZZ_p> Y1, Y2, Y3, Q;
   Init(Y1, 15, 1000);
   Init(Y2, 15, 10000);
   Init(Y3, 15, 100000);
-  Mat<ZZ_p> Q;
+
+  Mat<ZZ_P> A, B, C;
+  Init(A, 2, 2);
+  Init(B, 2, 2);
 
   if (pid == 1) {
     // Reconstruct the random mask
@@ -77,12 +80,24 @@ int main(int argc, char** argv) {
     mpc.RandMat(Y1, 15, 1000);
     mpc.RandMat(Y2, 15, 10000);
     mpc.RandMat(Y3, 15, 100000);
+
+    mpc.RandMat(A, 2, 2);
+    mpc.RandMat(B, 2, 2);
     mpc.RestoreSeed();
   } else if (pid == 2) {
     // Generate data
     mpc.RandMat(Y1, 15, 1000);
     mpc.RandMat(Y2, 15, 10000);
     mpc.RandMat(Y3, 15, 100000);
+
+    A[0][0] = ZZ_p(2);
+    A[0][1] = ZZ_p(3);
+    A[1][0] = ZZ_p(1);
+    A[1][1] = ZZ_p(4);
+    B[0][0] = ZZ_p(1);
+    B[0][1] = ZZ_p(0);
+    B[1][0] = ZZ_p(2);
+    B[1][1] = ZZ_p(1);
     
     // Mask out data
     cout << "Masking data ... ";
@@ -91,10 +106,16 @@ int main(int argc, char** argv) {
     mpc.RandMat(r1, 15, 1000);
     mpc.RandMat(r2, 15, 10000);
     mpc.RandMat(r3, 15, 100000);
+
+    Mat<ZZ_p> r4, r5;
+    mpc.RandMat(r4, 2, 2);
+    mpc.RandMat(r5, 2, 2);
     mpc.RestoreSeed();
     Y1 -= r1;
     Y2 -= r2;
     Y3 -= r3;
+    A -= r4;
+    B -= r5;
     cout << "done" << endl;
   }
 
@@ -104,6 +125,10 @@ int main(int argc, char** argv) {
   // mpc.OrthonormalBasis(Q, Y1);
   // cout << "-----------" << endl;
   mpc.OrthonormalBasis(Q, Y2);
+
+  mpc.FastMultMat(C, A, B);
+  mpc.print(C[0], 2);
+  mpc.print(C[1], 2);
 
   mpc.CleanUp();
 
