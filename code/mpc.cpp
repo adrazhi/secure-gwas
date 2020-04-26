@@ -10,7 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <omp.h>
-#include <protocol.h>
+#include "protocol.h"
 
 using namespace NTL;
 using namespace std;
