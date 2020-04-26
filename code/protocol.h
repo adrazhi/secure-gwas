@@ -1089,6 +1089,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   } else {
     cout << "Taking a pass to calculate genotype statistics:" << endl;
 
+    // reduce batch size to avoid memory issues because of the overhead
+    // in replicating dosage, g, miss, etc across all threads
     long bsize = Param::PITER_BATCH_SIZE / num_threads;
     long report_bsize = n1 / 10;
 
@@ -1932,10 +1934,14 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     /* Calculate orthonormal bases of Y */
     cout << "Initial orthonormal basis ... "; tic();
     Mat<ZZ_p> Q;
+    SetNumThreads(Param::NTL_NUM_THREADS + num_threads);
+    Param::NUM_THREADS = 1;
     mpc.ProfilerPushState("qr_m");
     mpc.OrthonormalBasis(Q, Y);
     mpc.ProfilerPopState(false); // qr_m
     Y.kill();
+    SetNumThreads(Param::NTL_NUM_THREADS);
+    Param::NUM_THREADS = num_threads;
     cout << "done. "; toc();
 
     Mat<ZZ_p> gQ_adj;
@@ -2071,11 +2077,15 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       if (pit == 0) {
         cout << "Orthonormal basis 1 ... "; tic();
       }
+      SetNumThreads(Param::NTL_NUM_THREADS + num_threads);
+      Param::NUM_THREADS = 1;
       mpc.Transpose(gQ); // kp-by-n1
       mpc.ProfilerPushState("qr_n");
       mpc.OrthonormalBasis(Q, gQ);
       mpc.ProfilerPopState(false); // qr_n
       mpc.Transpose(Q); // n1-by-kp
+      SetNumThreads(Param::NTL_NUM_THREADS);
+      Param::NUM_THREADS = num_threads;
       if (pit == 0) {
         cout << "done. "; toc();
       }
@@ -2206,7 +2216,11 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       if (pit == 0) {
         cout << "Orthonormal basis 2 ... "; tic();
       }
+      SetNumThreads(Param::NTL_NUM_THREADS + num_threads);
+      Param::NUM_THREADS = 1;
       mpc.OrthonormalBasis(Q, gQ_scaled);
+      SetNumThreads(Param::NTL_NUM_THREADS);
+      Param::NUM_THREADS = num_threads;
       if (pit == 0) {
         cout << "done. "; toc();
       }
@@ -2283,7 +2297,11 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     Mat<ZZ_p> U;
     Vec<ZZ_p> L;
     cout << "Eigenvector decomposition ... " << endl; tic();
+    SetNumThreads(Param::NTL_NUM_THREADS + num_threads);
+    Param::NUM_THREADS = 1;
     mpc.EigenDecomp(U, L, Z_gram);
+    SetNumThreads(Param::NTL_NUM_THREADS);
+    Param::NUM_THREADS = num_threads;
     cout << "done. "; toc();
     Z_gram.kill();
 
