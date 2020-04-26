@@ -1015,12 +1015,14 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
 
     cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Qv;
-    MultMat(Qv, Qsub, vt);
+    MultMat(Qv, Qsub, vt); tock();
+    cout << "Trunc ... "; tick();
     Trunc(Qv); tock();
 
     cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Qvv;
-    MultMat(Qvv, Qv, v);
+    MultMat(Qvv, Qv, v); tock();
+    cout << "Trunc ... "; tick();
     Trunc(Qvv); tock();
     if (pid > 0) {
       Qvv *= -2;
