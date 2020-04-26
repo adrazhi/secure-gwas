@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <omp.h>
+#include <protocol.h>
 
 using namespace NTL;
 using namespace std;
@@ -921,7 +922,8 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   for (int i = 0; i < c; i++) {
     Mat<ZZ_p> v;
     v.SetDims(1, Ap.NumCols());
-    Householder(v[0], Ap[0]);
+    cout << "Householder ... " << i; tic();
+    Householder(v[0], Ap[0]); toc();
 
     if (pid == 0) {
       v_list[i].SetLength(Ap.NumCols());
@@ -936,18 +938,21 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       transpose(vt, v);
     }
 
+    cout << "Multiplication ... " << i; tic();
     Mat<ZZ_p> Apv;
     MultMat(Apv, Ap, vt);
-    Trunc(Apv);
+    Trunc(Apv); toc();
 
+    cout << "Multiplication ... " << i; tic();
     Mat<ZZ_p> B;
     MultMat(B, Apv, v);
-    Trunc(B);
+    Trunc(B); toc();
     if (pid > 0) {
       B *= -2;
       B += Ap;
     }
 
+    cout << "Data Copy ... " << i; tic();
     Ap.SetDims(B.NumRows() - 1, B.NumCols() - 1);
     if (pid > 0) {
       for (int j = 0; j < B.NumRows() - 1; j++) {
@@ -956,6 +961,7 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
         }
       }
     }
+    toc();
   }
 
   Q.SetDims(c, n);
@@ -992,13 +998,15 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       }
     }
 
+    cout << "Multiplication ... " << i; tic();
     Mat<ZZ_p> Qv;
     MultMat(Qv, Qsub, vt);
-    Trunc(Qv);
+    Trunc(Qv); toc();
 
+    cout << "Multiplication ... " << i; tic();
     Mat<ZZ_p> Qvv;
     MultMat(Qvv, Qv, v);
-    Trunc(Qvv);
+    Trunc(Qvv); toc();
     if (pid > 0) {
       Qvv *= -2;
     }
