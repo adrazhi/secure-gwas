@@ -14,6 +14,9 @@
 using namespace NTL;
 using namespace std;
 
+using msec = chrono::milliseconds;
+using get_time = chrono::steady_clock;
+
 auto start = get_time::now();
 
 void tick() {
