@@ -955,12 +955,14 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
 
     cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Apv;
-    MultMat(Apv, Ap, vt);
+    MultMat(Apv, Ap, vt); tock();
+    cout << "Trunc ... "; tick();
     Trunc(Apv); tock();
 
     cout << "Multiplication ... "; tick();
     Mat<ZZ_p> B;
-    MultMat(B, Apv, v);
+    MultMat(B, Apv, v); tock();
+    cout << "Trunc ... "; tick();
     Trunc(B); tock();
     if (pid > 0) {
       B *= -2;
@@ -2956,24 +2958,39 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
     return;
   }
   int out_rows = a.NumRows();
+  int inner_dim = a.NumCols();
   int out_cols = b.NumCols();
 
-  if (debug) cout << "FastMultMat: (" << out_rows << ", " << a.NumCols() << "), (" << b.NumRows() << ", " << out_cols << ")" << endl;
+  if (debug) cout << "FastMultMat: (" << out_rows << ", " << inner_dim << "), (" << inner_dim << ", " << out_cols << ")" << endl;
 
   Mat<ZZ_p> ar, am, br, bm;
   BeaverPartition(ar, am, a, 0);
   BeaverPartition(br, bm, b, 0);
 
   Init(c, out_rows, out_cols);
+  int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
+
   if (pid == 0) {
-    Mat<ZZ_p> ambm;
-    mul(ambm, am, bm);
-    c += ambm;
+    #pragma omp parallel for num_threads(Param::NUM_THREADS)
+    for (int i = 0; i < out_rows; i++) {
+      for (int k = 0; k < inner_dim; j++) {
+        for (int j = 0; j < out_cols; k++) {
+          c[i][j] += am[i][k] * bm[k][j];
+        }
+      }
+    }
   } else {
-    c += ar * bm;
-    c += am * br;
-    if (pid == 1) {
-      c += ar * br;
+    #pragma omp parallel for num_threads(Param::NUM_THREADS)
+    for (int i = 0; i < out_rows; i++) {
+      for (int k = 0; k < inner_dim; j++) {
+        for (int j = 0; j < out_cols; k++) {
+          c[i][j] += ar[i][k] * bm[k][j];
+          c[i][j] += am[i][k] * br[k][j];
+          if (pid == 1) {
+            c[i][j] += ar[i][k] * br[k][j];
+          }
+        }
+      }
     }
   }
   
