@@ -2297,11 +2297,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     Mat<ZZ_p> U;
     Vec<ZZ_p> L;
     cout << "Eigenvector decomposition ... " << endl; tic();
-    SetNumThreads(Param::NTL_NUM_THREADS + num_threads);
-    Param::NUM_THREADS = 1;
     mpc.EigenDecomp(U, L, Z_gram);
-    SetNumThreads(Param::NTL_NUM_THREADS);
-    Param::NUM_THREADS = num_threads;
     cout << "done. "; toc();
     Z_gram.kill();
 
