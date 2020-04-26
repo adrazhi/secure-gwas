@@ -1038,7 +1038,7 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   }
 }
 
-void OrthonormalBasisParallel(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
+void MPCEnv::OrthonormalBasisParallel(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   if (debug) cout << "OrthonormalBasis: " << A.NumRows() << ", " << A.NumCols() << endl;
   if (Param::NUM_THREADS == 1) {
     OrthonormalBasis(Q, A);
