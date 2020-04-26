@@ -934,8 +934,8 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   for (int i = 0; i < c; i++) {
     Mat<ZZ_p> v;
     v.SetDims(1, Ap.NumCols());
-    cout << "Householder ... " << i; tic();
-    Householder(v[0], Ap[0]); toc();
+    cout << "Householder ... " << i; tick();
+    Householder(v[0], Ap[0]); tock();
 
     if (pid == 0) {
       v_list[i].SetLength(Ap.NumCols());
@@ -950,21 +950,21 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       transpose(vt, v);
     }
 
-    cout << "Multiplication ... " << i; tic();
+    cout << "Multiplication ... " << i; tick();
     Mat<ZZ_p> Apv;
     MultMat(Apv, Ap, vt);
-    Trunc(Apv); toc();
+    Trunc(Apv); tock();
 
-    cout << "Multiplication ... " << i; tic();
+    cout << "Multiplication ... " << i; tick();
     Mat<ZZ_p> B;
     MultMat(B, Apv, v);
-    Trunc(B); toc();
+    Trunc(B); tock();
     if (pid > 0) {
       B *= -2;
       B += Ap;
     }
 
-    cout << "Data Copy ... " << i; tic();
+    cout << "Data Copy ... " << i; tick();
     Ap.SetDims(B.NumRows() - 1, B.NumCols() - 1);
     if (pid > 0) {
       for (int j = 0; j < B.NumRows() - 1; j++) {
@@ -973,7 +973,7 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
         }
       }
     }
-    toc();
+    tock();
   }
 
   Q.SetDims(c, n);
@@ -1010,19 +1010,20 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       }
     }
 
-    cout << "Multiplication ... " << i; tic();
+    cout << "Multiplication ... " << i; tick();
     Mat<ZZ_p> Qv;
     MultMat(Qv, Qsub, vt);
-    Trunc(Qv); toc();
+    Trunc(Qv); tock();
 
-    cout << "Multiplication ... " << i; tic();
+    cout << "Multiplication ... " << i; tick();
     Mat<ZZ_p> Qvv;
     MultMat(Qvv, Qv, v);
-    Trunc(Qvv); toc();
+    Trunc(Qvv); tock();
     if (pid > 0) {
       Qvv *= -2;
     }
 
+    cout << "Data Copy ... " << i; tick();
     if (pid > 0) {
       for (int j = 0; j < c; j++) {
         for (int k = 0; k < n - i; k++) {
@@ -1030,6 +1031,7 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
         }
       }
     }
+    tock();
   }
 }
 
