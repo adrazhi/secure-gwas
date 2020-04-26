@@ -65,11 +65,10 @@ int main(int argc, char** argv) {
   // mpc.SetDebug(true);
 
   // Initialize matrices to hold inputs and outputs
-  Mat<ZZ_p> Y1, Y2, Y3, Y4;
+  Mat<ZZ_p> Y1, Y2, Y3;
   Init(Y1, 15, 1000);
   Init(Y2, 15, 10000);
-  Init(Y3, 1000, 15);
-  Init(Y4, 10000, 15);
+  Init(Y3, 15, 100000);
   Mat<ZZ_p> Q;
 
   if (pid == 1) {
@@ -77,36 +76,31 @@ int main(int argc, char** argv) {
     mpc.SwitchSeed(2);
     mpc.RandMat(Y1, 15, 1000);
     mpc.RandMat(Y2, 15, 10000);
-    mpc.RandMat(Y3, 1000, 15);
-    mpc.RandMat(Y4, 10000, 15);
+    mpc.RandMat(Y3, 15, 100000);
     mpc.RestoreSeed();
   } else if (pid == 2) {
     // Generate data
     mpc.RandMat(Y1, 15, 1000);
     mpc.RandMat(Y2, 15, 10000);
-    mpc.RandMat(Y3, 1000, 15);
-    mpc.RandMat(Y4, 10000, 15);
+    mpc.RandMat(Y3, 15, 100000);
     
     // Mask out data
     cout << "Masking data ... ";
-    Mat<ZZ_p> r1, r2, r3, r4;
+    Mat<ZZ_p> r1, r2, r3;
     mpc.SwitchSeed(1);
     mpc.RandMat(r1, 15, 1000);
     mpc.RandMat(r2, 15, 10000);
-    mpc.RandMat(r3, 1000, 15);
-    mpc.RandMat(r4, 10000, 15);
+    mpc.RandMat(r3, 15, 100000);
     mpc.RestoreSeed();
     Y1 -= r1;
     Y2 -= r2;
     Y3 -= r3;
-    Y4 -= r4;
     cout << "done" << endl;
   }
 
   tic(); mpc.OrthonormalBasis(Q, Y1); toc();
   tic(); mpc.OrthonormalBasis(Q, Y2); toc();
   tic(); mpc.OrthonormalBasis(Q, Y3); toc();
-  tic(); mpc.OrthonormalBasis(Q, Y4); toc();
 
   mpc.CleanUp();
 
