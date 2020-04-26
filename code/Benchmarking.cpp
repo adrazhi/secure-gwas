@@ -24,9 +24,6 @@ using namespace std;
 using msec = chrono::milliseconds;
 using get_time = chrono::steady_clock;
 
-// using tic, toc, and clock_start from protocol.h for profiling
-clock_start = get_time::now();
-
 int main(int argc, char** argv) {
   if (argc < 3) {
     cout << "Usage: Benchmarking party_id param_file num_threads ntl_num_threads" << endl;
