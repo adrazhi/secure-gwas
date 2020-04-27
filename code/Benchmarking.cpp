@@ -113,6 +113,14 @@ int main(int argc, char** argv) {
   tic(); mpc.FastMultMat(C, A, B); toc();
   tic(); mpc.FastTrunc(C); toc();
   cout << "----" << endl;
+  transpose(B);
+  tic(); mpc.MultMat(C, Y3, B); toc();
+  tic(); mpc.Trunc(C); toc();
+  cout << "----" << endl;
+  tic(); mpc.FastMultMat(C, Y3, B); toc();
+  tic(); mpc.FastTrunc(C); toc();
+  cout << "----" << endl;
+  transpose(B);
   tic(); mpc.FastMultMat2(C, A, B); toc();
   tic(); mpc.FastTrunc(C); toc();
 
