@@ -112,13 +112,13 @@ int main(int argc, char** argv) {
   BeaverPartition(V2_m, V2_r, V2);
   BeaverMult(V1, V1_m, V1_r, V2_m, V2_r);
   BeaverReconstruct(V1);
-  tic(); Trunc(V1); toc();
+  tic(); mpc.Trunc(V1); toc();
 
   BeaverPartition(V1_m, V1_r, V1);
   BeaverPartition(V2_m, V2_r, V2);
   BeaverMult(V1, V1_m, V1_r, V2_m, V2_r);
   BeaverReconstruct(V1);
-  tic(); FastTrunc(V1); toc();
+  tic(); mpc.FastTrunc(V1); toc();
   // Param::NUM_THREADS = 1;
   // tic(); mpc.OrthonormalBasis(Q, Y3); toc();
   // cout << "-----------" << endl;
