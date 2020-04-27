@@ -97,12 +97,9 @@ int main(int argc, char** argv) {
     cout << "done" << endl;
   }
 
-  // tic(); mpc.OrthonormalBasis(Q, Y1); toc();
-  // tic(); mpc.OrthonormalBasis(Q, Y2); toc();
-  // tic(); mpc.OrthonormalBasis(Q, Y3); toc();
-  tic(); mpc.OrthonormalBasis(Q, Y2); toc();
+  tic(); mpc.OrthonormalBasisParallel(Q, Y3); toc();
   // cout << "-----------" << endl;
-  tic(); mpc.OrthonormalBasisParallel(Q, Y2); toc();
+  tic(); mpc.OrthonormalBasis(Q, Y3); toc();
 
   mpc.CleanUp();
 
