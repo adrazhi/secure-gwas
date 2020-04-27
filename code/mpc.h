@@ -1426,7 +1426,7 @@ public:
   // multi-threaded version
   void RandMatBitsParallel(Mat<ZZ_p>& a, int nrows, int ncols, int bitlen) {
     a.SetDims(nrows, ncols);
-    int num_threads = (Param::NUM_THREADS <= nrows) ? Param:NUM_THREADS : nrows;
+    int num_threads = (Param::NUM_THREADS <= nrows) ? Param::NUM_THREADS : nrows;
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < nrows; i++)
       int thread = omp_get_thread_num();
