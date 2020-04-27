@@ -115,20 +115,14 @@ int main(int argc, char** argv) {
   cout << "Serial: Mult (15 by 1) x (1 x 100k) ... "; tic(); mpc.MultMat(C, A, B); toc();
   cout << "Serial: Trunc 15 by 100k ... "; tic(); mpc.Trunc(C); toc();
   cout << "----" << endl;
-  cout << "Parallel Mult 1 (15 by 1) x (1 x 100k) ... ";tic(); mpc.FastMultMat(C, A, B); toc();
-  cout << "Parallel Trunc 15 by 100k ... "; tic(); mpc.FastTrunc(C); toc();
-  cout << "----" << endl;
-  cout << "Parallel Mult 2 (15 by 1) x (1 x 100k) ... ";tic(); mpc.FastMultMat2(C, A, B); toc();
+  cout << "Parallel Mult (15 by 1) x (1 x 100k) ... ";tic(); mpc.FastMultMat(C, A, B); toc();
   cout << "Parallel Trunc 15 by 100k ... "; tic(); mpc.FastTrunc(C); toc();
   cout << "----" << endl;
 
   cout << "Serial: Mult (15 by 100k) x (100k x 1) ... "; tic(); mpc.MultMat(C, Y3, B2); toc();
   cout << "Serial: Trunc 15 by 1 ... "; tic(); mpc.Trunc(C); toc();
   cout << "----" << endl;
-  cout << "Parallel: Mult 1 (15 by 100k) x (100k x 1) ... "; tic(); mpc.FastMultMat(C, Y3, B2); toc();
-  cout << "Parallel: Trunc 15 by 1 ... "; tic(); mpc.FastTrunc(C); toc();
-  cout << "----" << endl;
-  cout << "Parallel: Mult 2 (15 by 100k) x (100k x 1) ... "; tic(); mpc.FastMultMat2(C, A, B); toc();
+  cout << "Parallel: Mult (15 by 100k) x (100k x 1) ... "; tic(); mpc.FastMultMat(C, Y3, B2); toc();
   cout << "Parallel: Trunc 15 by 1 ... "; tic(); mpc.FastTrunc(C); toc();
 
   // Param::NUM_THREADS = 1;
