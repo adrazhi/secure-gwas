@@ -1965,7 +1965,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
       Vec<ZZ_p> r_mask, r_low_mask;
-      SwitchSeed(1);
+      SwitchSeed(0);
       RandVec(r_mask, a.NumCols());
       RandVec(r_low_mask, a.NumCols());
       RestoreSeed();
