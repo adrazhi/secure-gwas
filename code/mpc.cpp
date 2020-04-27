@@ -2863,20 +2863,20 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
 
   Init(c, out_rows, out_cols);
   Mat<ZZ_p> br, bm;
-  // BeaverPartition(br, bm, b, 0);
-  br.SetDims(b.NumRows(), b.NumCols());
-  bm.SetDims(b.NumRows(), b.NumCols());
-  int num_threads = (Param::NUM_THREADS <= b.NumRows()) ? Param::NUM_THREADS : b.NumRows();
-  #pragma omp parallel for num_threads(num_threads)
-  for (int i = 0; i < b.NumRows(); i++) {
-    // to avoid error with multiple threads
-    ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
-    ZZ_p::init(base_p);
-    
-    BeaverPartition(br[i], bm[i], b[i], 0);
-  }
+  BeaverPartition(br, bm, b, 0);
+  // br.SetDims(b.NumRows(), b.NumCols());
+  // bm.SetDims(b.NumRows(), b.NumCols());
+  // int num_threads = (Param::NUM_THREADS <= b.NumRows()) ? Param::NUM_THREADS : b.NumRows();
+  // #pragma omp parallel for num_threads(num_threads)
+  // for (int i = 0; i < b.NumRows(); i++) {
+  //   // to avoid error with multiple threads
+  //   ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+  //   ZZ_p::init(base_p);
 
-  num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
+  //   BeaverPartition(br[i], bm[i], b[i], 0);
+  // }
+
+  int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < out_rows; i++) {
     // to avoid error with multiple threads
