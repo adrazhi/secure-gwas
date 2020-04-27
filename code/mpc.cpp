@@ -1086,13 +1086,13 @@ void MPCEnv::OrthonormalBasisParallel(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
 
     cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Apv;
-    MultMat(Apv, Ap, vt); tock();
+    FastMultMat(Apv, Ap, vt); tock();
     cout << "Trunc ... "; tick();
-    FastTrunc(Apv); tock();
+    Trunc(Apv); tock();
 
     cout << "Multiplication ... "; tick();
     Mat<ZZ_p> B;
-    MultMat(B, Apv, v); tock();
+    FastMultMat(B, Apv, v); tock();
     cout << "Trunc ... "; tick();
     FastTrunc(B); tock();
     if (pid > 0) {
@@ -1150,7 +1150,7 @@ void MPCEnv::OrthonormalBasisParallel(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
     Mat<ZZ_p> Qv;
     MultMat(Qv, Qsub, vt); tock();
     cout << "Trunc ... "; tick();
-    FastTrunc(Qv); tock();
+    Trunc(Qv); tock();
 
     cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Qvv;

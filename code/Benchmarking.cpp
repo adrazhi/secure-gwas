@@ -128,6 +128,12 @@ int main(int argc, char** argv) {
   mpc.FastMultMat(C, A, B);
   cout << "done. "; toc();
 
+  if (pid == 0) {
+    mpc.ReceiveBool(2);
+  } else if (pid == 2) {
+    mpc.SendBool(true, 0);
+  }
+
   mpc.CleanUp();
 
   cout << "Protocol successfully completed" << endl;
