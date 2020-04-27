@@ -112,6 +112,10 @@ int main(int argc, char** argv) {
   cout << "----" << endl;
   tic(); mpc.FastMultMat(C, A, B); toc();
   tic(); mpc.FastTrunc(C); toc();
+  cout << "----" << endl;
+  tic(); mpc.FastMultMat2(C, A, B); toc();
+  tic(); mpc.FastTrunc(C); toc();
+
   // Param::NUM_THREADS = 1;
   // tic(); mpc.OrthonormalBasis(Q, Y3); toc();
   // cout << "-----------" << endl;

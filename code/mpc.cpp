@@ -1927,6 +1927,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
     Trunc(a, k, m);
     return;
   }
+  int num_threads = a.NumRows();
 
   Mat<ZZ_p> r;
   Mat<ZZ_p> r_low;
@@ -1934,13 +1935,8 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
   r_low.SetDims(a.NumRows(), a.NumCols());
 
   if (pid == 0) {
-    cout << "RandMatBits 0 ... "; tick();
     RandMatBitsParallel(r, a.NumRows(), a.NumCols(), k + Param::NBIT_V);
-    tock();
-
-    cout << "For Loop 0 ... "; tick();
   
-    int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
       // to avoid error with multiple threads
@@ -1951,10 +1947,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
         r_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(r[i][j]), m));
       }
     }
-    tock();
 
-    cout << "Rand and Send 0 ... "; tick();    
-    num_threads = a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
       Vec<ZZ_p> r_mask, r_low_mask;
@@ -1967,23 +1960,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
       SendVec(r[i], 2);
       SendVec(r_low[i], 2);
     }
-    tock();
-
-    // Mat<ZZ_p> r_mask;
-    // Mat<ZZ_p> r_low_mask;
-    // SwitchSeed(1);
-    // RandMat(r_mask, a.NumRows(), a.NumCols());
-    // RandMat(r_low_mask, a.NumRows(), a.NumCols());
-    // RestoreSeed();
-
-    // r -= r_mask;
-    // r_low -= r_low_mask;
-
-    // SendMat(r, 2);
-    // SendMat(r_low, 2);
   } else if (pid == 2) {
-    cout << "Receive 2 ... "; tick();
-    int num_threads = a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
       Vec<ZZ_p> r_vec, r_low_vec;
@@ -1992,13 +1969,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
       r[i] = r_vec;
       r_low[i] = r_low_vec;
     }
-    tock();
-
-    // ReceiveMat(r, 0, a.NumRows(), a.NumCols());
-    // ReceiveMat(r_low, 0, a.NumRows(), a.NumCols());
   } else {
-    cout << "Rand 1 ... "; tick();
-    int num_threads = a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
       Vec<ZZ_p> r_mask, r_low_mask;
@@ -2009,31 +1980,23 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
       r[i] = r_mask;
       r_low[i] = r_low_mask;
     }
-    tock();
-
-    // SwitchSeed(0);
-    // RandMat(r, a.NumRows(), a.NumCols());
-    // RandMat(r_low, a.NumRows(), a.NumCols());
-    // RestoreSeed();
   }
 
-  cout << "Arithmetic ... "; tick();
   Mat<ZZ_p> c;
   if (pid > 0) {
     c = a + r;
   } else {
     c.SetDims(a.NumRows(), a.NumCols());
   }
-  tock();
 
-  cout << "RevealSym ... "; tick();
-  RevealSym(c);
-  tock();
+  #pragma omp parallel for num_threads(num_threads)
+  for (int i = 0; i < a.NumRows(); i++) {
+    RevealSym(c[i]);
+  }
   
   Mat<ZZ_p> c_low;
   c_low.SetDims(a.NumRows(), a.NumCols());
   if (pid > 0) {
-    cout << "For Loop 1/2 ... "; tick();
     int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
@@ -2045,18 +2008,14 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
         c_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(c[i][j]), m));
       }
     }
-    tock();
   }
 
   if (pid > 0) {
-    cout << "Arithmetic ... "; tick();
     a += r_low;
     if (pid == 1) {
       a -= c_low;
     }
-    tock();
 
-    cout << "twoinvm ... "; tick();
     ZZ_p twoinvm;
     map<int, ZZ_p>::iterator it = invpow_cache.find(m);
     if (it == invpow_cache.end()) {
@@ -2068,7 +2027,6 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
     } else {
       twoinvm = it->second;
     }
-    tock();
 
     a *= twoinvm;
   }
@@ -2920,38 +2878,48 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
     BeaverMult(c[i], ar, am, br, bm, 0);
     BeaverReconstruct(c[i], 0);
   }
+}
 
-  // Mat<ZZ_p> ar, am, br, bm;
-  // BeaverPartition(ar, am, a, 0);
-  // BeaverPartition(br, bm, b, 0);
-
-  // Init(c, out_rows, out_cols);
-  // int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
-
-  // if (pid == 0) {
-  //   #pragma omp parallel for num_threads(num_threads)
-  //   for (int i = 0; i < out_rows; i++) {
-  //     for (int k = 0; k < inner_dim; k++) {
-  //       for (int j = 0; j < out_cols; j++) {
-  //         c[i][j] += am[i][k] * bm[k][j];
-  //       }
-  //     }
-  //   }
-  // } else {
-  //   #pragma omp parallel for num_threads(num_threads)
-  //   for (int i = 0; i < out_rows; i++) {
-  //     for (int k = 0; k < inner_dim; k++) {
-  //       for (int j = 0; j < out_cols; j++) {
-  //         c[i][j] += ar[i][k] * bm[k][j];
-  //         c[i][j] += am[i][k] * br[k][j];
-  //         if (pid == 1) {
-  //           c[i][j] += ar[i][k] * br[k][j];
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
+void MPCEnv::FastMultMat2(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
+  if (Param::NUM_THREADS == 1) {
+    MultMat(c, a, b);
+    return;
+  }
+  int out_rows = a.NumRows();
+  int inner_dim = a.NumCols();
+  int out_cols = b.NumCols();
   
-  // BeaverReconstruct(c, 0);
+  Mat<ZZ_p> ar, am, br, bm;
+  BeaverPartition(ar, am, a, 0);
+  BeaverPartition(br, bm, b, 0);
+
+  Init(c, out_rows, out_cols);
+  int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
+
+  if (pid == 0) {
+    // #pragma omp parallel for num_threads(num_threads)
+    for (int i = 0; i < out_rows; i++) {
+      for (int k = 0; k < inner_dim; k++) {
+        for (int j = 0; j < out_cols; j++) {
+          c[i][j] += am[i][k] * bm[k][j];
+        }
+      }
+    }
+  } else {
+    // #pragma omp parallel for num_threads(num_threads)
+    for (int i = 0; i < out_rows; i++) {
+      for (int k = 0; k < inner_dim; k++) {
+        for (int j = 0; j < out_cols; j++) {
+          c[i][j] += ar[i][k] * bm[k][j];
+          c[i][j] += am[i][k] * br[k][j];
+          if (pid == 1) {
+            c[i][j] += ar[i][k] * br[k][j];
+          }
+        }
+      }
+    }
+  }
+  
+  BeaverReconstruct(c, 0);
 }
 

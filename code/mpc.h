@@ -120,6 +120,7 @@ public:
   }
   void FastTrunc(Vec<ZZ_p>& a) {FastTrunc(a, Param::NBIT_K + Param::NBIT_F, Param::NBIT_F); }
   void FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b);
+  void FastMultMat2(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b);
 
   // Returns shares of 2^(2t) where (2t or 2t+1) = NBIT_K - (bit-length of a number in a)
   // b_sqrt contains 2^t
