@@ -1017,8 +1017,8 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
     Trunc(Qv);
 
     Mat<ZZ_p> Qvv;
-    FastMultMat(Qvv, Qv, v); tock();
-    FastTrunc(Qvv); tock();
+    FastMultMat(Qvv, Qv, v);
+    FastTrunc(Qvv);
     if (pid > 0) {
       Qvv *= -2;
     }
