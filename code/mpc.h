@@ -1451,10 +1451,10 @@ private:
   Vec< Mat<ZZ_p> > lagrange_cache;
   map<int, ZZ_p> invpow_cache;
 
-  // TO DO: Profiler and logging variables must eventually be made thread-safe
-  // Then the corresponding profiling/logging functions could be made multi-threaded
-  // As of now, the work-around is to have just one shared copy of these variables
+  // In current implementation, we keep just one shared copy of profiler and logging variables
   // To avoid race conditions, only thread 0 (the main thread) actually executes profiling/logging functions
+  // If we want to track profiling data for all threads, we need to make these variables thread-safe and reimplement
+  // all corresponding profiling/logging functions
 
   /* Profiler data */
   stack<string> pstate;

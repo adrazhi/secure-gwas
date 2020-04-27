@@ -77,8 +77,7 @@ class Param {
     static long DIV_MAX_N; // maximum number of parallel divisions/sqrts
     static long PITER_BATCH_SIZE; // size of batch processing of genomes
     static long PAR_THRES; // minimum threshold for NTL thread-boosting
-    static long NTL_NUM_THREADS; // number of threads for automatic NTL thread-boosting
-    static long NUM_THREADS; // number of threads for explicit parallel routines in GWAS and Data Sharing clients
+    static long NUM_THREADS; // number of threads for parallel routines in GWAS and Data Sharing clients
     static bool CHUNK_MODE; // represents whether we want to share each dataset chunkwise (in parallel)
     static vector<long> NUM_CHUNKS; // number of chunks per dataset for chunked data-sharing
 

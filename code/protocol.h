@@ -564,7 +564,8 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid, int n, int chunk_id) {
 }
 
 bool gwas_protocol(MPCEnv& mpc, int pid) {
-  // SetNumThreads(Param::NTL_NUM_THREADS);
+  // NTL Thread Boosting significantly less effective than custom parallelization
+  // SetNumThreads(Param::NUM_THREADS);
   // cout << AvailableThreads() << " threads created for NTL" << endl;
 
   int n0 = 0; // total number of individuals across datasets
@@ -1919,14 +1920,11 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     Mat<ZZ_p> Y;
     Init(Y, kp, m3);
 
-    cout << "Initial multiplication ... "; tic();
-    #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < kp; i++) {
       mpc.BeaverMultElem(Y[i], Y_cur[i], Y_cur_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
     }
     Y_cur.kill();
     Y_cur_mask.kill();
-    cout << "done. "; toc();
 
     mpc.BeaverReconstruct(Y);
     mpc.Trunc(Y);
@@ -1952,15 +1950,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       // Normalize Q by standard deviations
       Init(Q_scaled, kp, m3);
-      if (pit == 0) {
-        cout << "Multiplication 1 ... "; tic();
-      }
-      #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(Q_scaled[i], Q[i], Q_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
-      }
-      if (pit == 0) {
-        cout << "done. "; toc();
       }
       mpc.BeaverReconstruct(Q_scaled);
       mpc.Trunc(Q_scaled);
@@ -1969,16 +1960,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       // Pre-multiply with g_mean to simplify calculation of centering matrix
       Init(Q_scaled_gmean, kp, m3);
-      if (pit == 0) {
-        cout << "Multiplication 2 ... "; tic();
-      }
-      #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(Q_scaled_gmean[i], Q_scaled[i], Q_scaled_mask[i],
                            g_mean_pca, g_mean_pca_mask);
-      }
-      if (pit == 0) {
-        cout << "done. "; toc();
       }
       mpc.BeaverReconstruct(Q_scaled_gmean);
       mpc.Trunc(Q_scaled_gmean);
@@ -2166,16 +2150,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       Mat<ZZ_p> gQ_adj_gmean;
       Init(gQ_adj_gmean, kp, m3);
-      if (pit == 0) {
-        cout << "Multiplication 3 ... "; tic();
-      }
-      #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(gQ_adj_gmean[i], gQ_adj[i], gQ_adj_mask[i],
                            g_mean_pca, g_mean_pca_mask);
-      }
-      if (pit == 0) {
-        cout << "done. "; toc();
       }
       mpc.BeaverReconstruct(gQ_adj_gmean);
       mpc.Trunc(gQ_adj_gmean);
@@ -2191,15 +2168,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       Mat<ZZ_p> gQ_scaled;
       gQ_scaled.SetDims(kp, m3);
       clear(gQ_scaled);
-      if (pit == 0) {
-        cout << "Multiplication 4 ... "; tic();
-      }
-      #pragma omp parallel for num_threads(num_threads)
       for (int i = 0; i < kp; i++) {
         mpc.BeaverMultElem(gQ_scaled[i], gQ[i], gQ_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
-      }
-      if (pit == 0) {
-        cout << "done. "; toc();
       }
       mpc.BeaverReconstruct(gQ_scaled);
       mpc.Trunc(gQ_scaled);
