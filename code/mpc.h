@@ -1422,6 +1422,17 @@ public:
       for (int j = 0; j < ncols; j++)
         a[i][j] = conv<ZZ_p>(RandomBits_ZZ(bitlen, prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second));
   }
+
+  // multi-threaded version
+  void RandMatBitsParallel(Mat<ZZ_p>& a, int nrows, int ncols, int bitlen) {
+    a.SetDims(nrows, ncols);
+    int num_threads = (Param::NUM_THREADS <= nrows) ? Param:NUM_THREADS : nrows;
+    #pragma omp parallel for num_threads(num_threads)
+    for (int i = 0; i < nrows; i++)
+      int thread = omp_get_thread_num();
+      for (int j = 0; j < ncols; j++)
+        a[i][j] = conv<ZZ_p>(RandomBits_ZZ(bitlen, prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second));
+  }
   
   // a contains column indices (1-based) into cached tables
   void TableLookup(Mat<ZZ_p>& b, Vec<ZZ_p>& a, int cache_id);

@@ -1932,7 +1932,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
   Mat<ZZ_p> r_low;
   if (pid == 0) {
     cout << "RandMatBits 0 ... "; tick();
-    RandMatBits(r, a.NumRows(), a.NumCols(), k + Param::NBIT_V);
+    RandMatBitsParallel(r, a.NumRows(), a.NumCols(), k + Param::NBIT_V);
     tock();
 
     cout << "For Loop 0 ... "; tick();
