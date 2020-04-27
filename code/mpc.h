@@ -47,8 +47,6 @@ public:
   void QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A);
   // Optimized for memory (need to call this on a large matrix)
   void OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A);
-  // Optimized (multi-threaded) version
-  void OrthonormalBasisParallel(Mat<ZZ_p>& Q, Mat<ZZ_p>& A);
   void Tridiag(Mat<ZZ_p>& T, Mat<ZZ_p>& Q, Mat<ZZ_p>& A);
   void EigenDecomp(Mat<ZZ_p>& V, Vec<ZZ_p>& L, Mat<ZZ_p>& A);
 
@@ -82,10 +80,9 @@ public:
 
   // Optimized (multi-threaded) versions of expensive long-vector subroutines
   // These indirectly also enable speed ups in the following routines:
-  // (Not)LessThan(Public), Householder, QRFactSquare, OrthonormalBasis, Tridiag, EigenDecomp, NegLogSigmoid
   void FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b);
   void FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a);
-  void IsPositiveParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& a);
+  void IsPositiveParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& a); // used to enable speed up in (Not)LessThan(Public) routines
 
   // k is the bit-length of the underlying data range
   // m is the number of bits to truncate
@@ -111,8 +108,10 @@ public:
   void Trunc(ZZ_p& a) { Trunc(a, Param::NBIT_K + Param::NBIT_F, Param::NBIT_F); }
 
   // Optimized (multi-threaded) version of expensive matrix routines
+  // Used to speed up the expensive OrthonormalBasis routine
   void FastTrunc(Mat<ZZ_p>& a, int k, int m);
   void FastTrunc(Mat<ZZ_p>& a) {FastTrunc(a, Param::NBIT_K + Param::NBIT_F, Param::NBIT_F); }
+  void FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b);
 
   // Returns shares of 2^(2t) where (2t or 2t+1) = NBIT_K - (bit-length of a number in a)
   // b_sqrt contains 2^t
@@ -1020,9 +1019,7 @@ public:
   void MultMat(Mat<T>& c, Mat<T>& a, Mat<T>& b, int fid = 0) {
     MultAux(c, a, b, false, fid);
   }
-
-  // Optimized (multi-threaded) version of regular matrix multiplication used to speed up OrthonormalBasis
-  void FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b);
+  
 
   template<class T>
   void MultMatParallel(Vec< Mat<T> >& c, Vec< Mat<T> >& a, Vec< Mat<T> >& b, int fid = 0) {

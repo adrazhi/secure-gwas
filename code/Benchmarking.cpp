@@ -26,7 +26,7 @@ using get_time = chrono::steady_clock;
 
 int main(int argc, char** argv) {
   if (argc < 3) {
-    cout << "Usage: Benchmarking party_id param_file num_threads ntl_num_threads" << endl;
+    cout << "Usage: Benchmarking party_id param_file" << endl;
     return 1;
   }
 
@@ -42,15 +42,10 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  string n1_str(argv[3]);
-  long n1 = stoi(n1_str);
-  Param::NUM_THREADS = n1;
+  Param::NUM_THREADS = 20;
   cout << "Num Threads: " << Param::NUM_THREADS << endl;
 
-  // string n2_str(argv[4]);
-  // long n2 = stoi(n2_str);
-  // Param::NTL_NUM_THREADS = n2;
-  // SetNumThreads(Param::NTL_NUM_THREADS);
+  // SetNumThreads(5);
   // cout << AvailableThreads() << " threads created for NTL" << endl;
 
   vector< pair<int, int> > pairs;
@@ -112,9 +107,22 @@ int main(int argc, char** argv) {
     cout << "done" << endl;
   }
 
-  tic(); mpc.Householder(V1, V2); toc();
-  // tic(); mpc.OrthonormalBasisParallel(Q, Y3); toc();
+  Vec<ZZ_p> V1_m, V1_r, V2_m, V2_r;
+  BeaverPartition(V1_m, V1_r, V1);
+  BeaverPartition(V2_m, V2_r, V2);
+  BeaverMult(V1, V1_m, V1_r, V2_m, V2_r);
+  BeaverReconstruct(V1);
+  tic(); Trunc(V1); toc();
+
+  BeaverPartition(V1_m, V1_r, V1);
+  BeaverPartition(V2_m, V2_r, V2);
+  BeaverMult(V1, V1_m, V1_r, V2_m, V2_r);
+  BeaverReconstruct(V1);
+  tic(); FastTrunc(V1); toc();
+  // Param::NUM_THREADS = 1;
+  // tic(); mpc.OrthonormalBasis(Q, Y3); toc();
   // cout << "-----------" << endl;
+  // Param::NUM_THREADS = 20;
   // tic(); mpc.OrthonormalBasis(Q, Y3); toc();
 
   mpc.CleanUp();

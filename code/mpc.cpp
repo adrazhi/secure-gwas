@@ -747,22 +747,17 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   int n = x.length();
 
   Vec<ZZ_p> xr, xm;
-  cout << "Partition 1 ... "; tick();
-  BeaverPartition(xr, xm, x); tock();
+  BeaverPartition(xr, xm, x);
 
   Vec<ZZ_p> xdot;
   Init(xdot, 1);
-  cout << "Inner Product ... "; tick();
-  BeaverInnerProd(xdot[0], xr, xm); tock();
-  cout << "Reconstruct ... "; tick();
-  BeaverReconstruct(xdot); tock();
-  cout << "Trunc ... "; tick();
-  Trunc(xdot); tock();
+  BeaverInnerProd(xdot[0], xr, xm);
+  BeaverReconstruct(xdot);
+  Trunc(xdot);
 
   Vec<ZZ_p> xnorm, dummy;
   // don't need to parallelize this cause it's a vector of length 1
-  cout << "Sqrt 1 ... "; tick();
-  FPSqrt(xnorm, dummy, xdot); tock();
+  FPSqrt(xnorm, dummy, xdot);
 
   Vec<ZZ_p> x1;
   x1.SetLength(1);
@@ -770,50 +765,37 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
 
   Vec<ZZ_p> x1sign;
   // don't need to parallelize this cause it's a vector of length 1
-  cout << "IsPositive ... "; tick();
-  IsPositive(x1sign, x1); tock();
+  IsPositive(x1sign, x1);
 
-  cout << "Arithmetic ... "; tick();
   x1sign *= 2;
   if (pid == 1) {
     x1sign[0] -= 1;
   }
-  tock();
 
   Vec<ZZ_p> shift;
-  cout << "MultElem ... "; tick();
-  MultElem(shift, xnorm, x1sign); tock();
+  MultElem(shift, xnorm, x1sign);
 
   ZZ_p sr, sm;
-  cout << "Partition ... "; tick();
-  BeaverPartition(sr, sm, shift[0]); tock();
+  BeaverPartition(sr, sm, shift[0]);
 
   ZZ_p dot_shift(0);
-  cout << "Beaver Mult 1 ... "; tick();
-  BeaverMult(dot_shift, xr[0], xm[0], sr, sm); tock();
-   cout << "Reconstruct ... "; tick();
-  BeaverReconstruct(dot_shift); tock();
-  cout << "Trunc ... "; tick();
-  Trunc(dot_shift); tock();
+  BeaverMult(dot_shift, xr[0], xm[0], sr, sm);
+  BeaverReconstruct(dot_shift);
+  Trunc(dot_shift);
 
-  cout << "Arithmetic ... "; tick();
   Vec<ZZ_p> vdot;
   vdot.SetLength(1);
   if (pid > 0) {
     vdot[0] = 2 * (xdot[0] + dot_shift);
   }
-  tock();
 
   Vec<ZZ_p> vnorm_inv;
   // don't need to parallelize this cause it's a vector of length 1
-  cout << "Sqrt 2 ... "; tick();
-  FPSqrt(dummy, vnorm_inv, vdot); tock();
+  FPSqrt(dummy, vnorm_inv, vdot);
 
   ZZ_p invr, invm;
-  cout << "Partition ... "; tick();
-  BeaverPartition(invr, invm, vnorm_inv[0]); tock();
+  BeaverPartition(invr, invm, vnorm_inv[0]);
  
-  cout << "Arithmetic ... "; tick();
   Vec<ZZ_p> vr, vm;
   if (pid > 0) {
     vr = xr;
@@ -823,15 +805,12 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   }
   vm = xm;
   vm[0] += sm;
-  tock();
 
   Init(v, n);
-  cout << "Beaver Mult 2 ... "; tick();
-  BeaverMult(v, vr, vm, invr, invm); tock();
-  cout << "Reconstruct ... "; tick();
-  BeaverReconstruct(v); tock();
-  cout << "Trunc ... "; tick();
-  Trunc(v); tock();
+  BeaverMult(v, vr, vm, invr, invm);
+  BeaverReconstruct(v);
+  // This call is the main bottleneck
+  FastTrunc(v);
 }
 
 void MPCEnv::QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A) {
@@ -940,137 +919,6 @@ void MPCEnv::QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A) {
 
 void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   if (debug) cout << "OrthonormalBasis: " << A.NumRows() << ", " << A.NumCols() << endl;
-
-  assert(A.NumCols() >= A.NumRows());
-
-  int c = A.NumRows();
-  int n = A.NumCols();
-
-  Vec< Vec<ZZ_p> > v_list;
-  v_list.SetLength(c);
-
-  Mat<ZZ_p> Ap;
-  if (pid == 0) {
-    Ap.SetDims(c, n);
-  } else {
-    Ap = A;
-  }
-
-  ZZ_p one;
-  DoubleToFP(one, 1, Param::NBIT_K, Param::NBIT_F);
-
-  for (int i = 0; i < c; i++) {
-    Mat<ZZ_p> v;
-    v.SetDims(1, Ap.NumCols());
-    cout << "Householder ... "; tick();
-    Householder(v[0], Ap[0]); tock();
-
-    if (pid == 0) {
-      v_list[i].SetLength(Ap.NumCols());
-    } else {
-      v_list[i] = v[0];
-    }
-
-    Mat<ZZ_p> vt;
-    if (pid == 0) {
-      vt.SetDims(Ap.NumCols(), 1);
-    } else {
-      transpose(vt, v);
-    }
-
-    cout << "Multiplication ... "; tick();
-    Mat<ZZ_p> Apv;
-    MultMat(Apv, Ap, vt); tock();
-    cout << "Trunc ... "; tick();
-    Trunc(Apv); tock();
-
-    cout << "Multiplication ... "; tick();
-    Mat<ZZ_p> B;
-    MultMat(B, Apv, v); tock();
-    cout << "Trunc ... "; tick();
-    Trunc(B); tock();
-    if (pid > 0) {
-      B *= -2;
-      B += Ap;
-    }
-
-    Ap.SetDims(B.NumRows() - 1, B.NumCols() - 1);
-    if (pid > 0) {
-      for (int j = 0; j < B.NumRows() - 1; j++) {
-        for (int k = 0; k < B.NumCols() - 1; k++) {
-          Ap[j][k] = B[j+1][k+1];
-        }
-      }
-    }
-  }
-
-  Q.SetDims(c, n);
-  if (pid > 0) {
-    clear(Q);
-    if (pid == 1) {
-      for (int i = 0; i < c; i++) {
-        Q[i][i] = one;
-      }
-    }
-  }
-
-  cout << "second loop" << endl;
-
-  for (int i = c - 1; i >= 0; i--) {
-    Mat<ZZ_p> v;
-    v.SetDims(1, v_list[i].length());
-    if (pid > 0) {
-      v[0] = v_list[i];
-    }
-
-    Mat<ZZ_p> vt;
-    if (pid == 0) {
-      vt.SetDims(v.NumCols(), 1);
-    } else {
-      transpose(vt, v);
-    }
-
-    Mat<ZZ_p> Qsub;
-    Qsub.SetDims(c, n - i);
-    if (pid > 0) {
-      for (int j = 0; j < c; j++) {
-        for (int k = 0; k < n - i; k++) {
-          Qsub[j][k] = Q[j][k+i];
-        }
-      }
-    }
-
-    cout << "Multiplication ... "; tick();
-    Mat<ZZ_p> Qv;
-    MultMat(Qv, Qsub, vt); tock();
-    cout << "Trunc ... "; tick();
-    Trunc(Qv); tock();
-
-    cout << "Multiplication ... "; tick();
-    Mat<ZZ_p> Qvv;
-    MultMat(Qvv, Qv, v); tock();
-    cout << "Trunc ... "; tick();
-    Trunc(Qvv); tock();
-    if (pid > 0) {
-      Qvv *= -2;
-    }
-
-    if (pid > 0) {
-      for (int j = 0; j < c; j++) {
-        for (int k = 0; k < n - i; k++) {
-          Q[j][k+i] += Qvv[j][k];
-        }
-      }
-    }
-  }
-}
-
-void MPCEnv::OrthonormalBasisParallel(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
-  if (debug) cout << "OrthonormalBasis: " << A.NumRows() << ", " << A.NumCols() << endl;
-  if (Param::NUM_THREADS == 1) {
-    OrthonormalBasis(Q, A);
-    return;
-  }
 
   assert(A.NumCols() >= A.NumRows());
 
@@ -2083,8 +1931,11 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
   Mat<ZZ_p> r;
   Mat<ZZ_p> r_low;
   if (pid == 0) {
+    cout << "RandMatBits 0 ... "; tick();
     RandMatBits(r, a.NumRows(), a.NumCols(), k + Param::NBIT_V);
+    tock();
 
+    cout << "For Loop 0 ... "; tick();
     r_low.SetDims(a.NumRows(), a.NumCols());
     int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
@@ -2097,41 +1948,55 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
         r_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(r[i][j]), m));
       }
     }
+    tock();
 
+    cout << "Rand 0 ... "; tick();
     Mat<ZZ_p> r_mask;
     Mat<ZZ_p> r_low_mask;
     SwitchSeed(1);
     RandMat(r_mask, a.NumRows(), a.NumCols());
     RandMat(r_low_mask, a.NumRows(), a.NumCols());
     RestoreSeed();
+    tock();
 
     r -= r_mask;
     r_low -= r_low_mask;
 
+    cout << "Send 0 ... "; tick();
     SendMat(r, 2);
     SendMat(r_low, 2);
+    tock();
   } else if (pid == 2) {
+    cout << "Receive 2 ... "; tick();
     ReceiveMat(r, 0, a.NumRows(), a.NumCols());
     ReceiveMat(r_low, 0, a.NumRows(), a.NumCols());
+    tock();
   } else {
+    cout << "Rand 1 ... "; tick();
     SwitchSeed(0);
     RandMat(r, a.NumRows(), a.NumCols());
     RandMat(r_low, a.NumRows(), a.NumCols());
     RestoreSeed();
+    tock();
   }
 
+  cout << "Arithmetic ... "; tick();
   Mat<ZZ_p> c;
   if (pid > 0) {
     c = a + r;
   } else {
     c.SetDims(a.NumRows(), a.NumCols());
   }
+  tock();
 
+  cout << "RevealSym ... "; tick();
   RevealSym(c);
+  tock();
   
   Mat<ZZ_p> c_low;
   c_low.SetDims(a.NumRows(), a.NumCols());
   if (pid > 0) {
+    cout << "For Loop 1/2 ... "; tick();
     int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
@@ -2143,14 +2008,18 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
         c_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(c[i][j]), m));
       }
     }
+    tock();
   }
 
   if (pid > 0) {
+    cout << "Arithmetic ... "; tick();
     a += r_low;
     if (pid == 1) {
       a -= c_low;
     }
+    tock();
 
+    cout << "twoinvm ... "; tick();
     ZZ_p twoinvm;
     map<int, ZZ_p>::iterator it = invpow_cache.find(m);
     if (it == invpow_cache.end()) {
@@ -2162,6 +2031,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
     } else {
       twoinvm = it->second;
     }
+    tock();
 
     a *= twoinvm;
   }
