@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Param::NUM_THREADS = 20;
+  Param::NUM_THREADS = 1;
   // cout << "Num Threads: " << Param::NUM_THREADS << endl;
   SetNumThreads(20);
 
