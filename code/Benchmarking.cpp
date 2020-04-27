@@ -139,10 +139,12 @@ int main(int argc, char** argv) {
   for (int i = 0; i < 10; i++) {
     tic(); mpc.OrthonormalBasis(Q, Y1); toc();
   }
+  mpc.Print(Q[0], 3);
   Param::NUM_THREADS = 20;
   for (int i = 0; i < 10; i++) {
     tic(); mpc.OrthonormalBasis(Q, Y1); toc();
   }
+  mpc.Print(Q[0], 3);
 
   mpc.CleanUp();
 
