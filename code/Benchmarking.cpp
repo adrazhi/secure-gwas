@@ -71,8 +71,8 @@ int main(int argc, char** argv) {
   Init(Y3, 15, 100000);
 
   Mat<ZZ_p> A, B, C;
-  Init(A, 15, 10000);
-  Init(B, 10000, 1);
+  Init(A, 15, 100000);
+  Init(B, 100000, 1);
 
   if (pid == 1) {
     // Reconstruct the random mask
@@ -90,8 +90,8 @@ int main(int argc, char** argv) {
     mpc.RandMat(Y2, 15, 10000);
     mpc.RandMat(Y3, 15, 100000);
 
-    mpc.RandMat(A, 15, 10000);
-    mpc.RandMat(B, 10000, 1);
+    mpc.RandMat(A, 15, 100000);
+    mpc.RandMat(B, 100000, 1);
     
     // Mask out data
     cout << "Masking data ... ";
@@ -102,8 +102,8 @@ int main(int argc, char** argv) {
     mpc.RandMat(r3, 15, 100000);
 
     Mat<ZZ_p> r4, r5;
-    mpc.RandMat(r4, 15, 10000);
-    mpc.RandMat(r5, 10000, 1);
+    mpc.RandMat(r4, 15, 100000);
+    mpc.RandMat(r5, 100000, 1);
     mpc.RestoreSeed();
     Y1 -= r1;
     Y2 -= r2;
