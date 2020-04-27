@@ -1981,7 +1981,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
   } else if (pid == 2) {
     cout << "Receive 2 ... "; tick();
     int num_threads = a.NumRows();
-    #pragma omp parallel for num_threads(num_threads)
+    // #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
       Vec<ZZ_p> r_vec, r_low_vec;
       ReceiveVec(r_vec, 0, a.NumCols());
@@ -1996,7 +1996,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
   } else {
     cout << "Rand 1 ... "; tick();
     int num_threads = a.NumRows();
-    #pragma omp parallel for num_threads(num_threads)
+    // #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
       Vec<ZZ_p> r_mask, r_low_mask;
       SwitchSeed(1);
