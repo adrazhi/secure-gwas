@@ -747,14 +747,17 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   int n = x.length();
 
   Vec<ZZ_p> xr, xm;
-  BeaverPartition(xr, xm, x);
+  cout << "Partition 1 ... "; tick();
+  BeaverPartition(xr, xm, x); tock();
 
   Vec<ZZ_p> xdot;
   Init(xdot, 1);
   cout << "Inner Product ... "; tick();
   BeaverInnerProd(xdot[0], xr, xm); tock();
-  BeaverReconstruct(xdot);
-  Trunc(xdot);
+  cout << "Reconstruct ... "; tick();
+  BeaverReconstruct(xdot); tock();
+  cout << "Trunc ... "; tick();
+  Trunc(xdot); tock();
 
   Vec<ZZ_p> xnorm, dummy;
   // don't need to parallelize this cause it's a vector of length 1
@@ -770,30 +773,36 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   cout << "IsPositive ... "; tick();
   IsPositive(x1sign, x1); tock();
 
+  cout << "Arithmetic ... "; tick();
   x1sign *= 2;
   if (pid == 1) {
     x1sign[0] -= 1;
   }
+  tock();
 
   Vec<ZZ_p> shift;
   cout << "MultElem ... "; tick();
   MultElem(shift, xnorm, x1sign); tock();
 
   ZZ_p sr, sm;
-  BeaverPartition(sr, sm, shift[0]);
+  cout << "Partition ... "; tick();
+  BeaverPartition(sr, sm, shift[0]); tock();
 
   ZZ_p dot_shift(0);
   cout << "Beaver Mult 1 ... "; tick();
   BeaverMult(dot_shift, xr[0], xm[0], sr, sm); tock();
-  BeaverReconstruct(dot_shift);
+   cout << "Reconstruct ... "; tick();
+  BeaverReconstruct(dot_shift); tock();
   cout << "Trunc ... "; tick();
   Trunc(dot_shift); tock();
 
+  cout << "Arithmetic ... "; tick();
   Vec<ZZ_p> vdot;
   vdot.SetLength(1);
   if (pid > 0) {
     vdot[0] = 2 * (xdot[0] + dot_shift);
   }
+  tock();
 
   Vec<ZZ_p> vnorm_inv;
   // don't need to parallelize this cause it's a vector of length 1
@@ -801,8 +810,10 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   FPSqrt(dummy, vnorm_inv, vdot); tock();
 
   ZZ_p invr, invm;
-  BeaverPartition(invr, invm, vnorm_inv[0]);
+  cout << "Partition ... "; tick();
+  BeaverPartition(invr, invm, vnorm_inv[0]); tock();
  
+  cout << "Arithmetic ... "; tick();
   Vec<ZZ_p> vr, vm;
   if (pid > 0) {
     vr = xr;
@@ -812,12 +823,15 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   }
   vm = xm;
   vm[0] += sm;
+  tock();
 
   Init(v, n);
   cout << "Beaver Mult 2 ... "; tick();
   BeaverMult(v, vr, vm, invr, invm); tock();
-  BeaverReconstruct(v);
-  Trunc(v);
+  cout << "Reconstruct ... "; tick();
+  BeaverReconstruct(v); tock();
+  cout << "Trunc ... "; tick();
+  Trunc(v); tock();
 }
 
 void MPCEnv::QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A) {
