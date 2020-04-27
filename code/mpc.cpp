@@ -1950,34 +1950,68 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
     }
     tock();
 
-    cout << "Rand 0 ... "; tick();
-    Mat<ZZ_p> r_mask;
-    Mat<ZZ_p> r_low_mask;
-    SwitchSeed(1);
-    RandMat(r_mask, a.NumRows(), a.NumCols());
-    RandMat(r_low_mask, a.NumRows(), a.NumCols());
-    RestoreSeed();
+    cout << "Rand and Send 0 ... "; tick();    
+    num_threads = a.NumRows();
+    #pragma omp parallel for num_threads(num_threads)
+    for (int i = 0; i < a.NumRows(); i++) {
+      Vec<ZZ_p> r_mask, r_low_mask;
+      SwitchSeed(1);
+      RandVec(r_mask, a.NumCols());
+      RandVec(r_low_mask, a.NumCols());
+      RestoreSeed();
+      r[i] -= r_mask;
+      r_low[i] -= r_low_mask;
+      SendVec(r[i], 2);
+      SendVec(r_low[i], 2);
+    }
     tock();
 
-    r -= r_mask;
-    r_low -= r_low_mask;
+    // Mat<ZZ_p> r_mask;
+    // Mat<ZZ_p> r_low_mask;
+    // SwitchSeed(1);
+    // RandMat(r_mask, a.NumRows(), a.NumCols());
+    // RandMat(r_low_mask, a.NumRows(), a.NumCols());
+    // RestoreSeed();
 
-    cout << "Send 0 ... "; tick();
-    SendMat(r, 2);
-    SendMat(r_low, 2);
-    tock();
+    // r -= r_mask;
+    // r_low -= r_low_mask;
+
+    // SendMat(r, 2);
+    // SendMat(r_low, 2);
   } else if (pid == 2) {
     cout << "Receive 2 ... "; tick();
-    ReceiveMat(r, 0, a.NumRows(), a.NumCols());
-    ReceiveMat(r_low, 0, a.NumRows(), a.NumCols());
+    int num_threads = a.NumRows();
+    #pragma omp parallel for num_threads(num_threads)
+    for (int i = 0; i < a.NumRows(); i++) {
+      Vec<ZZ_p> r_vec, r_low_vec;
+      ReceiveVec(r_vec, 2);
+      ReceiveVec(r_low_vec, 2);
+      r[i] = r_vec;
+      r_low[i] = r_low_vec;
+    }
     tock();
+
+    // ReceiveMat(r, 0, a.NumRows(), a.NumCols());
+    // ReceiveMat(r_low, 0, a.NumRows(), a.NumCols());
   } else {
     cout << "Rand 1 ... "; tick();
-    SwitchSeed(0);
-    RandMat(r, a.NumRows(), a.NumCols());
-    RandMat(r_low, a.NumRows(), a.NumCols());
-    RestoreSeed();
+    int num_threads = a.NumRows();
+    #pragma omp parallel for num_threads(num_threads)
+    for (int i = 0; i < a.NumRows(); i++) {
+      Vec<ZZ_p> r_mask, r_low_mask;
+      SwitchSeed(1);
+      RandVec(r_mask, a.NumCols());
+      RandVec(r_low_mask, a.NumCols());
+      RestoreSeed();
+      r[i] = r_mask;
+      r_low[i] = r_low_mask;
+    }
     tock();
+
+    // SwitchSeed(0);
+    // RandMat(r, a.NumRows(), a.NumCols());
+    // RandMat(r_low, a.NumRows(), a.NumCols());
+    // RestoreSeed();
   }
 
   cout << "Arithmetic ... "; tick();
