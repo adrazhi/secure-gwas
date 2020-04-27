@@ -751,19 +751,24 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
 
   Vec<ZZ_p> xdot;
   Init(xdot, 1);
-  BeaverInnerProd(xdot[0], xr, xm);
+  cout << "Inner Product ... "; tick();
+  BeaverInnerProd(xdot[0], xr, xm); tock();
   BeaverReconstruct(xdot);
   Trunc(xdot);
 
   Vec<ZZ_p> xnorm, dummy;
-  FPSqrtParallel(xnorm, dummy, xdot);
+  // don't need to parallelize this cause it's a vector of length 1
+  cout << "Sqrt 1 ... "; tick();
+  FPSqrt(xnorm, dummy, xdot); tock();
 
   Vec<ZZ_p> x1;
   x1.SetLength(1);
   x1[0] = x[0];
 
   Vec<ZZ_p> x1sign;
-  IsPositiveParallel(x1sign, x1);
+  // don't need to parallelize this cause it's a vector of length 1
+  cout << "IsPositive ... "; tick();
+  IsPositive(x1sign, x1); tock();
 
   x1sign *= 2;
   if (pid == 1) {
@@ -771,15 +776,18 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   }
 
   Vec<ZZ_p> shift;
-  MultElem(shift, xnorm, x1sign);
+  cout << "MultElem ... "; tick();
+  MultElem(shift, xnorm, x1sign); tock();
 
   ZZ_p sr, sm;
   BeaverPartition(sr, sm, shift[0]);
 
   ZZ_p dot_shift(0);
-  BeaverMult(dot_shift, xr[0], xm[0], sr, sm);
+  cout << "Beaver Mult 1 ... "; tick();
+  BeaverMult(dot_shift, xr[0], xm[0], sr, sm); tock();
   BeaverReconstruct(dot_shift);
-  Trunc(dot_shift);
+  cout << "Trunc ... "; tick();
+  Trunc(dot_shift); tock();
 
   Vec<ZZ_p> vdot;
   vdot.SetLength(1);
@@ -788,7 +796,9 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   }
 
   Vec<ZZ_p> vnorm_inv;
-  FPSqrtParallel(dummy, vnorm_inv, vdot);
+  // don't need to parallelize this cause it's a vector of length 1
+  cout << "Sqrt 2 ... "; tick();
+  FPSqrt(dummy, vnorm_inv, vdot); tock();
 
   ZZ_p invr, invm;
   BeaverPartition(invr, invm, vnorm_inv[0]);
@@ -804,7 +814,8 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   vm[0] += sm;
 
   Init(v, n);
-  BeaverMult(v, vr, vm, invr, invm);
+  cout << "Beaver Mult 2 ... "; tick();
+  BeaverMult(v, vr, vm, invr, invm); tock();
   BeaverReconstruct(v);
   Trunc(v);
 }

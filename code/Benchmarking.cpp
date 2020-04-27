@@ -47,11 +47,11 @@ int main(int argc, char** argv) {
   Param::NUM_THREADS = n1;
   cout << "Num Threads: " << Param::NUM_THREADS << endl;
 
-  string n2_str(argv[4]);
-  long n2 = stoi(n2_str);
-  Param::NTL_NUM_THREADS = n2;
-  SetNumThreads(Param::NTL_NUM_THREADS);
-  cout << AvailableThreads() << " threads created for NTL" << endl;
+  // string n2_str(argv[4]);
+  // long n2 = stoi(n2_str);
+  // Param::NTL_NUM_THREADS = n2;
+  // SetNumThreads(Param::NTL_NUM_THREADS);
+  // cout << AvailableThreads() << " threads created for NTL" << endl;
 
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));
@@ -70,18 +70,28 @@ int main(int argc, char** argv) {
   Init(Y2, 15, 10000);
   Init(Y3, 15, 100000);
 
+  Vec<ZZ_P> V1, V2;
+  Init(V1, 100000);
+  Init(V2, 100000);
+
   if (pid == 1) {
     // Reconstruct the random mask
     mpc.SwitchSeed(2);
     mpc.RandMat(Y1, 15, 1000);
     mpc.RandMat(Y2, 15, 10000);
     mpc.RandMat(Y3, 15, 100000);
+
+    mpc.RandVec(V1, 100000);
+    mpc.RandVec(V2, 100000);
     mpc.RestoreSeed();
   } else if (pid == 2) {
     // Generate data
     mpc.RandMat(Y1, 15, 1000);
     mpc.RandMat(Y2, 15, 10000);
     mpc.RandMat(Y3, 15, 100000);
+
+    mpc.RandVec(V1, 100000);
+    mpc.RandVec(V2, 100000);
     
     // Mask out data
     cout << "Masking data ... ";
@@ -90,16 +100,22 @@ int main(int argc, char** argv) {
     mpc.RandMat(r1, 15, 1000);
     mpc.RandMat(r2, 15, 10000);
     mpc.RandMat(r3, 15, 100000);
+    Vec<ZZ_p> r4, r5;
+    mpc.RandVec(r4, 100000);
+    mpc.RandVec(r5, 100000);
     mpc.RestoreSeed();
     Y1 -= r1;
     Y2 -= r2;
     Y3 -= r3;
+    V1 -= r4;
+    V2 -= r5;
     cout << "done" << endl;
   }
 
-  tic(); mpc.OrthonormalBasisParallel(Q, Y3); toc();
+  tic(); mpc.Householder(V1, V2); toc();
+  // tic(); mpc.OrthonormalBasisParallel(Q, Y3); toc();
   // cout << "-----------" << endl;
-  tic(); mpc.OrthonormalBasis(Q, Y3); toc();
+  // tic(); mpc.OrthonormalBasis(Q, Y3); toc();
 
   mpc.CleanUp();
 
