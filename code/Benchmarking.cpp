@@ -65,9 +65,9 @@ int main(int argc, char** argv) {
   Init(Y2, 15, 10000);
   Init(Y3, 15, 100000);
 
-  Vec<ZZ_p> V1, V2;
-  Init(V1, 100000);
-  Init(V2, 100000);
+  Mat<ZZ_p> C, A, B;
+  Init(A, 15, 1);
+  Init(B, 1, 100000);
 
   if (pid == 1) {
     // Reconstruct the random mask
@@ -76,8 +76,8 @@ int main(int argc, char** argv) {
     mpc.RandMat(Y2, 15, 10000);
     mpc.RandMat(Y3, 15, 100000);
 
-    mpc.RandVec(V1, 100000);
-    mpc.RandVec(V2, 100000);
+    mpc.RandMat(A, 15, 1);
+    mpc.RandMat(B, 1, 100000);
     mpc.RestoreSeed();
   } else if (pid == 2) {
     // Generate data
@@ -85,8 +85,8 @@ int main(int argc, char** argv) {
     mpc.RandMat(Y2, 15, 10000);
     mpc.RandMat(Y3, 15, 100000);
 
-    mpc.RandVec(V1, 100000);
-    mpc.RandVec(V2, 100000);
+    mpc.RandMat(A, 15, 1);
+    mpc.RandMat(B, 1, 100000);
     
     // Mask out data
     cout << "Masking data ... ";
@@ -95,30 +95,23 @@ int main(int argc, char** argv) {
     mpc.RandMat(r1, 15, 1000);
     mpc.RandMat(r2, 15, 10000);
     mpc.RandMat(r3, 15, 100000);
-    Vec<ZZ_p> r4, r5;
-    mpc.RandVec(r4, 100000);
-    mpc.RandVec(r5, 100000);
+    Mat<ZZ_p> r4, r5;
+    mpc.RandMat(r4, 15, 1);
+    mpc.RandMat(r5, 1, 100000);
     mpc.RestoreSeed();
     Y1 -= r1;
     Y2 -= r2;
     Y3 -= r3;
-    V1 -= r4;
-    V2 -= r5;
+    A -= r4;
+    B -= r5;
     cout << "done" << endl;
   }
 
-  Vec<ZZ_p> V1_m, V1_r, V2_m, V2_r;
-  mpc.BeaverPartition(V1_m, V1_r, V1);
-  mpc.BeaverPartition(V2_m, V2_r, V2);
-  mpc.BeaverMult(V1, V1_m, V1_r, V2_m, V2_r);
-  mpc.BeaverReconstruct(V1);
-  tic(); mpc.Trunc(V1); toc();
-
-  mpc.BeaverPartition(V1_m, V1_r, V1);
-  mpc.BeaverPartition(V2_m, V2_r, V2);
-  mpc.BeaverMult(V1, V1_m, V1_r, V2_m, V2_r);
-  mpc.BeaverReconstruct(V1);
-  tic(); mpc.FastTrunc(V1); toc();
+  tic(); mpc.MultMat(C, A, B); toc();
+  tic(); mpc.Trunc(C); toc();
+  cout << "----" << endl;
+  tic(); mpc.FastMultMat(C, A, B); toc();
+  tic(); mpc.FastTrunc(C); toc();
   // Param::NUM_THREADS = 1;
   // tic(); mpc.OrthonormalBasis(Q, Y3); toc();
   // cout << "-----------" << endl;
