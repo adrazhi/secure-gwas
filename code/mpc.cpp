@@ -2973,8 +2973,8 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
   if (pid == 0) {
     #pragma omp parallel for num_threads(Param::NUM_THREADS)
     for (int i = 0; i < out_rows; i++) {
-      for (int k = 0; k < inner_dim; j++) {
-        for (int j = 0; j < out_cols; k++) {
+      for (int k = 0; k < inner_dim; k++) {
+        for (int j = 0; j < out_cols; j++) {
           c[i][j] += am[i][k] * bm[k][j];
         }
       }
@@ -2982,8 +2982,8 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
   } else {
     #pragma omp parallel for num_threads(Param::NUM_THREADS)
     for (int i = 0; i < out_rows; i++) {
-      for (int k = 0; k < inner_dim; j++) {
-        for (int j = 0; j < out_cols; k++) {
+      for (int k = 0; k < inner_dim; k++) {
+        for (int j = 0; j < out_cols; j++) {
           c[i][j] += ar[i][k] * bm[k][j];
           c[i][j] += am[i][k] * br[k][j];
           if (pid == 1) {

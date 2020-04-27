@@ -124,9 +124,16 @@ int main(int argc, char** argv) {
   // tic(); mpc.OrthonormalBasis(Q, Y3); toc();
   // mpc.OrthonormalBasis(Q, Y1);
   // cout << "-----------" << endl;
-  mpc.OrthonormalBasis(Q, Y2);
+  // mpc.OrthonormalBasis(Q, Y2);
 
+  // cout << "Custom Mult... "; tic();
+  // mpc.MultMat(C, A, B);
+  // cout << "done. "; toc();
+
+  cout << "Custom Mult... "; tic();
   mpc.FastMultMat(C, A, B);
+  cout << "done. "; toc();
+
   mpc.Print(C[0], 2);
   mpc.Print(C[1], 2);
 
