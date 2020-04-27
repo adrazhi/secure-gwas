@@ -2064,6 +2064,10 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
     int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
+      // to avoid error with multiple threads
+      ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+      ZZ_p::init(base_p);
+
       for (int j = 0; j < a.NumCols(); j++) {
         r_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(r[i][j]), m));
       }
@@ -2106,6 +2110,10 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
     int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
+      // to avoid error with multiple threads
+      ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+      ZZ_p::init(base_p);
+
       for (int j = 0; j < a.NumCols(); j++) {
         c_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(c[i][j]), m));
       }
@@ -2967,6 +2975,10 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
   int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < out_rows; i++) {
+    // to avoid error with multiple threads
+    ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+    ZZ_p::init(base_p);
+      
     MultMat(c[i], a[i], b);
   }
 
