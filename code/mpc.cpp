@@ -1984,8 +1984,8 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
       Vec<ZZ_p> r_vec, r_low_vec;
-      ReceiveVec(r_vec, 2);
-      ReceiveVec(r_low_vec, 2);
+      ReceiveVec(r_vec, 0, a.NumCols());
+      ReceiveVec(r_low_vec, 0, a.NumCols());
       r[i] = r_vec;
       r_low[i] = r_low_vec;
     }
