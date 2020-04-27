@@ -111,6 +111,14 @@ public:
   // Used to speed up the expensive OrthonormalBasis routine
   void FastTrunc(Mat<ZZ_p>& a, int k, int m);
   void FastTrunc(Mat<ZZ_p>& a) {FastTrunc(a, Param::NBIT_K + Param::NBIT_F, Param::NBIT_F); }
+  void FastTrunc(Vec<ZZ_p>& a, int k, int m) {
+    Mat<ZZ_p> am;
+    am.SetDims(1, a.length());
+    am[0] = a;
+    FastTrunc(am, k, m);
+    a = am[0];
+  }
+  void FastTrunc(Vec<ZZ_p>& a) {FastTrunc(a, Param::NBIT_K + Param::NBIT_F, Param::NBIT_F); }
   void FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b);
 
   // Returns shares of 2^(2t) where (2t or 2t+1) = NBIT_K - (bit-length of a number in a)
