@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
   // cout << "-----------" << endl;
   // mpc.OrthonormalBasis(Q, Y2);
 
-  cout << "Custom Mult... "; tic();
+  cout << "Original Mult... "; tic();
   mpc.MultMat(C, A, B);
   cout << "done. "; toc();
 

@@ -2971,15 +2971,24 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
 
   if (debug) cout << "FastMultMat: (" << out_rows << ", " << inner_dim << "), (" << inner_dim << ", " << out_cols << ")" << endl;
 
+  Mat<ZZ_p> br, bm;
+  BeaverPartition(br, bm, b, 0);
   Init(c, out_rows, out_cols);
+
   int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < out_rows; i++) {
     // to avoid error with multiple threads
     ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
     ZZ_p::init(base_p);
-      
-    MultMat(c[i], a[i], b);
+
+    Vec<ZZ_p> ar, am;
+    BeaverPartition(ar, am, a[i], 0);
+    
+    BeaverMult(c[i], ar, am, br, bm, 0);
+    BeaverReconstruct(c[i], 0);
+
+    // MultMat(c[i], a[i], b);
   }
 
   // Mat<ZZ_p> ar, am, br, bm;
