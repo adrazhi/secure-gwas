@@ -42,8 +42,9 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  Param::NUM_THREADS = 20;
-  cout << "Num Threads: " << Param::NUM_THREADS << endl;
+  // Param::NUM_THREADS = 20;
+  // cout << "Num Threads: " << Param::NUM_THREADS << endl;
+  SetNumThreads(20);
 
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));
