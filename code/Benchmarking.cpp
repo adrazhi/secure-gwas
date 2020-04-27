@@ -45,9 +45,6 @@ int main(int argc, char** argv) {
   Param::NUM_THREADS = 20;
   cout << "Num Threads: " << Param::NUM_THREADS << endl;
 
-  SetNumThreads(5);
-  cout << AvailableThreads() << " threads created for NTL" << endl;
-
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));
   pairs.push_back(make_pair(0, 2));
