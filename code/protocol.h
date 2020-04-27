@@ -1677,6 +1677,10 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         }
       }
 
+      // Improve performance by writing the pca data for each chunk to a separate cache file in parallel
+      fstream inner_fs;
+      inner_fs.open(cache(pid, dataset_idx, "pca_input").c_str(), ios::out | ios::binary);
+
       // avoid error by re-setting the modulus within each thread
       ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
       ZZ_p::init(base_p);
@@ -1768,20 +1772,16 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         dosage[i] = g[1] + 2 * g[2];
         dosage_mask[i] = g_mask[1] + 2 * g_mask[2];
 
+        mpc.BeaverWriteToFile(dosage[i], dosage_mask[i], fs);
+        mpc.BeaverWriteToFile(miss[i], miss_mask[i], fs);
+
         if ((i - offset + 1) % bsize == 0 || (i - offset) == inner_n1 - 1) {
           cout << "\t" << i+1 << " / " << n1 << ", "; toc(); tic();
         }
       }
       inner_ifs.close();
+      fs.close();
     }
-
-    // The actual writing of the data files must be done serially
-    fs.open(cache(pid, "pca_input").c_str(), ios::out | ios::binary);
-    for (int i = 0; i < n1; i++) {
-      mpc.BeaverWriteToFile(dosage[i], dosage_mask[i], fs);
-      mpc.BeaverWriteToFile(miss[i], miss_mask[i], fs);
-    }
-    fs.close();
   }
 
   mpc.ProfilerPopState(false); // reduce_file
@@ -1823,37 +1823,62 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       bucket_count[i] = 0;
     }
 
-    ifs.open(cache(pid, "pca_input").c_str(), ios::in | ios::binary);
-    for (int cur = 0; cur < n1; cur++) {
-      // Count sketch (use global PRG)
-      mpc.SwitchSeed(-1);
-      long bucket_index = mpc.RandBnd(kp);
-      long rand_sign = mpc.RandBnd(2) * 2 - 1;
-      mpc.RestoreSeed();
+    #pragma omp parallel for num_threads(num_threads)
+    for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
+      ifstream inner_ifs;
+      inner_ifs.open(cache(pid, dataset_idx, "pca_input").c_str(), ios::in | ios::binary);
 
-      Vec<ZZ_p> g, g_mask, miss, miss_mask;
-      mpc.BeaverReadFromFile(g, g_mask, ifs, m3);
-      mpc.BeaverReadFromFile(miss, miss_mask, ifs, m3);
+      // Containers to store intermediate results for batching (costly) global updates
+      Mat<ZZ_p> inner_Y_cur, inner_Y_cur_adj;
+      Init(inner_Y_cur, kp, m3);
+      Init(inner_Y_cur_adj, kp, m3);
 
-      // Flip miss bits so it points to places where g_mean should be subtracted
-      mpc.BeaverFlipBit(miss, miss_mask);
-
-      // Update running sum
-      if (pid > 0) {
-        Y_cur[bucket_index] += rand_sign * g_mask;
-        if (pid == 1) {
-          Y_cur[bucket_index] += rand_sign * g;
-        }
+      Vec<int> inner_bucket_count;
+      inner_bucket_count.SetLength(kp);
+      for (int i = 0; i < kp; i++) {
+        inner_bucket_count[i] = 0;
       }
 
-      // Update adjustment factor
-      miss *= rand_sign;
-      miss_mask *= rand_sign;
-      mpc.BeaverMultElem(Y_cur_adj[bucket_index], miss, miss_mask, g_mean_pca, g_mean_pca_mask);
+      long inner_n1 = n1_vec[dataset_idx];
+      for (int cur = 0; cur < inner_n1; cur++) {
+        // Count sketch (use global PRG)
+        mpc.SwitchSeed(-1);
+        long bucket_index = mpc.RandBnd(kp);
+        long rand_sign = mpc.RandBnd(2) * 2 - 1;
+        mpc.RestoreSeed();
 
-      bucket_count[bucket_index]++;
+        Vec<ZZ_p> g, g_mask, miss, miss_mask;
+        mpc.BeaverReadFromFile(g, g_mask, inner_ifs, m3);
+        mpc.BeaverReadFromFile(miss, miss_mask, inner_ifs, m3);
+
+        // Flip miss bits so it points to places where g_mean should be subtracted
+        mpc.BeaverFlipBit(miss, miss_mask);
+
+        // Update running sum
+        if (pid > 0) {
+          inner_Y_cur[bucket_index] += rand_sign * g_mask;
+          if (pid == 1) {
+            inner_Y_cur[bucket_index] += rand_sign * g;
+          }
+        }
+
+        // Update adjustment factor
+        miss *= rand_sign;
+        miss_mask *= rand_sign;
+        mpc.BeaverMultElem(inner_Y_cur_adj[bucket_index], miss, miss_mask, g_mean_pca, g_mean_pca_mask);
+
+        inner_bucket_count[bucket_index]++;
+      }
+      inner_ifs.close();
+
+       // Update global values - these operations must be atomic
+      #pragma omp critical ( Y_cur_update )
+        Y_cur += inner_Y_cur;
+      #pragma omp critical ( Y_cur_adj_update )
+        Y_cur_adj += inner_Y_cur_adj;
+      #pragma omp critical ( bucket_count_update )
+        bucket_count += inner_bucket_count;
     }
-    ifs.close();
 
     // Subtract the adjustment factor
     mpc.BeaverReconstruct(Y_cur_adj);
@@ -1972,14 +1997,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       mpc.Transpose(Q_scaled_gmean); // m3-by-kp
       mpc.BeaverPartition(Q_scaled_gmean_mask, Q_scaled_gmean);
 
-      Mat<ZZ_p> g, g_mask, miss, miss_mask;
-
-      long bsize = Param::PITER_BATCH_SIZE;
-
-      Init(g, bsize, m3);
-      Init(g_mask, bsize, m3);
-      Init(miss, bsize, m3);
-      Init(miss_mask, bsize, m3);
+      // reduce batch size to avoid memory issues when replicating variables across threads
+      long bsize = Param::PITER_BATCH_SIZE / num_threads;
       
       /* Pass 1 */
       Init(gQ, n1, kp);
@@ -1991,55 +2010,63 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       if (pit == 0) {
         cout << "Data scan 1 ... "; tic();
       }
-      ifs.open(cache(pid, "pca_input").c_str(), ios::in | ios::binary);
-      for (int cur = 0; cur < n1; cur++) {
-        mpc.BeaverReadFromFile(g[cur % bsize], g_mask[cur % bsize], ifs, m3);
-        mpc.BeaverReadFromFile(miss[cur % bsize], miss_mask[cur % bsize], ifs, m3);
-        mpc.BeaverFlipBit(miss[cur % bsize], miss_mask[cur % bsize]);
+      #pragma omp parallel for num_threads(num_threads)
+      for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
+        ifstream inner_ifs;
+        inner_ifs.open(cache(pid, dataset_idx, "pca_input").c_str(), ios::in | ios::binary);
 
-        if (cur % bsize == bsize - 1) {
-          mpc.ProfilerPopState(false); // file_io
+        Mat<ZZ_p> g, g_mask, miss, miss_mask;
+        Init(g, bsize, m3);
+        Init(g_mask, bsize, m3);
+        Init(miss, bsize, m3);
+        Init(miss_mask, bsize, m3);
 
-          Init(tmp_mat, bsize, kp);
-          mpc.BeaverMult(tmp_mat, g, g_mask, Q_scaled, Q_scaled_mask);
-          for (int i = 0; i < bsize; i++) {
-            gQ[cur-(bsize-1)+i] = tmp_mat[i];
-          }
-
-          Init(tmp_mat, bsize, kp);
-          mpc.BeaverMult(tmp_mat, miss, miss_mask, Q_scaled_gmean, Q_scaled_gmean_mask);
-          for (int i = 0; i < bsize; i++) {
-            gQ_adj[cur-(bsize-1)+i] = tmp_mat[i];
-          }
-
-          mpc.ProfilerPushState("file_io");
+        long offset = 0;
+        for (int j = 0; j < dataset_idx; j++) {
+          offset += n1_vec[j];
         }
+        long inner_n1 = n1_vec[dataset_idx];
+        for (int cur = 0; cur < inner_n1; cur++) {
+          mpc.BeaverReadFromFile(g[cur % bsize], g_mask[cur % bsize], inner_ifs, m3);
+          mpc.BeaverReadFromFile(miss[cur % bsize], miss_mask[cur % bsize], inner_ifs, m3);
+          mpc.BeaverFlipBit(miss[cur % bsize], miss_mask[cur % bsize]);
+
+          if (cur % bsize == bsize - 1 || cur == inner_n1 - 1) {
+            mpc.ProfilerPopState(false); // file_io
+            int new_bsize = bsize;
+            if (cur % bsize < bsize - 1) {
+              new_bsize = (cur % bsize) + 1;
+              g.SetDims(new_bsize, m3);
+              g_mask.SetDims(new_bsize, m3);
+              miss.SetDims(new_bsize, m3);
+              miss_mask.SetDims(new_bsize, m3);
+            }
+
+            Mat<ZZ_p> result;
+            Init(result, new_bsize, kp);
+            mpc.BeaverMult(result, g, g_mask, Q_scaled, Q_scaled_mask);
+            for (int i = 0; i < new_bsize; i++) {
+              gQ[(cur+offset)-(new_bsize-1)+i] = result[i];
+            }
+
+            Init(result, new_bsize, kp);
+            mpc.BeaverMult(result, miss, miss_mask, Q_scaled_gmean, Q_scaled_gmean_mask);
+            for (int i = 0; i < new_bsize; i++) {
+              gQ_adj[(cur+offset)-(new_bsize-1)+i] = result[i];
+            }
+
+            if (cur < inner_n1 - 1) mpc.ProfilerPushState("file_io");
+          }
+        }
+        ifs.close();
+        
+        g.kill();
+        g_mask.kill();
+        miss.kill();
+        miss_mask.kill();
       }
-      ifs.close();
       if (pit == 0) {
         cout << "done. "; toc();
-      }
-      mpc.ProfilerPopState(false); // file_io
-
-      long remainder = n1 % bsize;
-      if (remainder > 0) {
-        g.SetDims(remainder, m3);
-        g_mask.SetDims(remainder, m3);
-        miss.SetDims(remainder, m3);
-        miss_mask.SetDims(remainder, m3);
-
-        Init(tmp_mat, remainder, kp);
-        mpc.BeaverMult(tmp_mat, g, g_mask, Q_scaled, Q_scaled_mask);
-        for (int i = 0; i < remainder; i++) {
-          gQ[n1-remainder+i] = tmp_mat[i];
-        }
-
-        Init(tmp_mat, remainder, kp);
-        mpc.BeaverMult(tmp_mat, miss, miss_mask, Q_scaled_gmean, Q_scaled_gmean_mask);
-        for (int i = 0; i < remainder; i++) {
-          gQ_adj[n1-remainder+i] = tmp_mat[i];
-        }
-
       }
 
       mpc.BeaverReconstruct(gQ);
@@ -2071,15 +2098,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       Init(gQ, kp, m3);
       Init(gQ_adj, kp, m3);
 
-      Init(g, bsize, m3);
-      Init(g_mask, bsize, m3);
-      Init(miss, bsize, m3);
-      Init(miss_mask, bsize, m3);
-
-      Mat<ZZ_p> Qsub, Qsub_mask;
-      Init(Qsub, bsize, kp);
-      Init(Qsub_mask, bsize, kp);
-
       mpc.ProfilerPushState("data_scan2");
 
       // Pass 2
@@ -2087,58 +2105,83 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       if (pit == 0) {
         cout << "Data scan 2 ... "; tic();
       }
-      ifs.open(cache(pid, "pca_input").c_str(), ios::in | ios::binary);
-      for (int cur = 0; cur < n1; cur++) {
-        mpc.BeaverReadFromFile(g[cur % bsize], g_mask[cur % bsize], ifs, m3);
-        mpc.BeaverReadFromFile(miss[cur % bsize], miss_mask[cur % bsize], ifs, m3);
-        mpc.BeaverFlipBit(miss[cur % bsize], miss_mask[cur % bsize]);
+      #pragma omp parallel for num_threads(num_threads)
+      for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
+        ifstream inner_ifs;
+        inner_ifs.open(cache(pid, dataset_idx, "pca_input").c_str(), ios::in | ios::binary);
 
-        Qsub[cur % bsize] = Q[cur];
-        Qsub_mask[cur % bsize] = Q_mask[cur];
+        Mat<ZZ_p> g, g_mask, miss, miss_mask, Qsub, Qsub_mask;;
+        Init(g, bsize, m3);
+        Init(g_mask, bsize, m3);
+        Init(miss, bsize, m3);
+        Init(miss_mask, bsize, m3);
+        Init(Qsub, bsize, kp);
+        Init(Qsub_mask, bsize, kp);
 
-        if (cur % bsize == bsize - 1) {
-          mpc.ProfilerPopState(false); // file_io
+        // Containers to store intermediate results for batching (costly) global updates
+        Mat<ZZ_p> inner_gQ, inner_gQ_adj;
+        Init(inner_gQ, kp, m3);
+        Init(inner_gQ_adj, kp, m3);
 
-          mpc.Transpose(Qsub);
-          transpose(Qsub_mask, Qsub_mask);
-
-          mpc.BeaverMult(gQ, Qsub, Qsub_mask, g, g_mask);
-          mpc.BeaverMult(gQ_adj, Qsub, Qsub_mask, miss, miss_mask);
-
-          Qsub.SetDims(bsize, kp);
-          Qsub_mask.SetDims(bsize, kp);
-
-          mpc.ProfilerPushState("file_io");
+        long offset = 0;
+        for (int j = 0; j < dataset_idx; j++) {
+          offset += n1_vec[j];
         }
+        long inner_n1 = n1_vec[dataset_idx];
+        for (int cur = 0; cur < inner_n1; cur++) {
+          mpc.BeaverReadFromFile(g[cur % bsize], g_mask[cur % bsize], inner_ifs, m3);
+          mpc.BeaverReadFromFile(miss[cur % bsize], miss_mask[cur % bsize], inner_ifs, m3);
+          mpc.BeaverFlipBit(miss[cur % bsize], miss_mask[cur % bsize]);
+
+          Qsub[cur % bsize] = Q[cur + offset];
+          Qsub_mask[cur % bsize] = Q_mask[cur + offset];
+
+          if (cur % bsize == bsize - 1 || cur == inner_n1 - 1) {
+            mpc.ProfilerPopState(false); // file_io
+            int new_bsize = bsize;
+            if (cur % bsize < bsize - 1) {
+              new_bsize = (cur % bsize) + 1;
+              g.SetDims(new_bsize, m3);
+              g_mask.SetDims(new_bsize, m3);
+              miss.SetDims(new_bsize, m3);
+              miss_mask.SetDims(new_bsize, m3);
+              Qsub.SetDims(new_bsize, kp);
+              Qsub_mask.SetDims(new_bsize, kp);
+            }
+
+            mpc.Transpose(Qsub);
+            transpose(Qsub_mask, Qsub_mask);
+
+            mpc.BeaverMult(inner_gQ, Qsub, Qsub_mask, g, g_mask);
+            mpc.BeaverMult(inner_gQ_adj, Qsub, Qsub_mask, miss, miss_mask);
+
+            Qsub.SetDims(bsize, kp);
+            Qsub_mask.SetDims(bsize, kp);
+
+            if (cur < inner_n1 - 1) mpc.ProfilerPushState("file_io");
+          }
+        }
+        ifs.close();
+
+        // Update global values - these operations must be atomic
+        #pragma omp critical ( gQ_update )
+          gQ += inner_gQ;
+        #pragma omp critical ( gQ_adj_update )
+          gQ_adj += inner_gQ_adj;
+        
+        g.kill();
+        g_mask.kill();
+        miss.kill();
+        miss_mask.kill();
+        Qsub.kill();
+        Qsub_mask.kill();
+        inner_gQ.kill();
+        inner_gQ_adj.kill();
       }
-      ifs.close();
       if (pit == 0) {
         cout << "done. "; toc();
       }
       mpc.ProfilerPopState(false); // file_io
-
-      remainder = n1 % bsize;
-      if (remainder > 0) {
-        g.SetDims(remainder, m3);
-        g_mask.SetDims(remainder, m3);
-        miss.SetDims(remainder, m3);
-        miss_mask.SetDims(remainder, m3);
-        Qsub.SetDims(remainder, kp);
-        Qsub_mask.SetDims(remainder, kp);
-        
-        mpc.Transpose(Qsub);
-        transpose(Qsub_mask, Qsub_mask);
-
-        mpc.BeaverMult(gQ, Qsub, Qsub_mask, g, g_mask);
-        mpc.BeaverMult(gQ_adj, Qsub, Qsub_mask, miss, miss_mask);
-      }
-
-      Qsub.kill();
-      Qsub_mask.kill();
-      g.kill();
-      g_mask.kill();
-      miss.kill();
-      miss_mask.kill();
 
       mpc.BeaverReconstruct(gQ);
       mpc.BeaverReconstruct(gQ_adj);
@@ -2195,7 +2238,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       mpc.WriteToFile(gQ, fs);
     }
     fs.close();
-
   }
 
   mpc.ProfilerPopState(true); // power_iter
