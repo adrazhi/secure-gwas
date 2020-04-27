@@ -1934,14 +1934,10 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     /* Calculate orthonormal bases of Y */
     cout << "Initial orthonormal basis ... "; tic();
     Mat<ZZ_p> Q;
-    SetNumThreads(Param::NTL_NUM_THREADS + num_threads);
-    Param::NUM_THREADS = 1;
     mpc.ProfilerPushState("qr_m");
     mpc.OrthonormalBasis(Q, Y);
     mpc.ProfilerPopState(false); // qr_m
     Y.kill();
-    SetNumThreads(Param::NTL_NUM_THREADS);
-    Param::NUM_THREADS = num_threads;
     cout << "done. "; toc();
 
     Mat<ZZ_p> gQ_adj;
@@ -2077,15 +2073,11 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       if (pit == 0) {
         cout << "Orthonormal basis 1 ... "; tic();
       }
-      SetNumThreads(Param::NTL_NUM_THREADS + num_threads);
-      Param::NUM_THREADS = 1;
       mpc.Transpose(gQ); // kp-by-n1
       mpc.ProfilerPushState("qr_n");
       mpc.OrthonormalBasis(Q, gQ);
       mpc.ProfilerPopState(false); // qr_n
       mpc.Transpose(Q); // n1-by-kp
-      SetNumThreads(Param::NTL_NUM_THREADS);
-      Param::NUM_THREADS = num_threads;
       if (pit == 0) {
         cout << "done. "; toc();
       }
@@ -2216,11 +2208,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       if (pit == 0) {
         cout << "Orthonormal basis 2 ... "; tic();
       }
-      SetNumThreads(Param::NTL_NUM_THREADS + num_threads);
-      Param::NUM_THREADS = 1;
       mpc.OrthonormalBasis(Q, gQ_scaled);
-      SetNumThreads(Param::NTL_NUM_THREADS);
-      Param::NUM_THREADS = num_threads;
       if (pit == 0) {
         cout << "done. "; toc();
       }

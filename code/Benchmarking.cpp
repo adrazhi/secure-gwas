@@ -45,8 +45,8 @@ int main(int argc, char** argv) {
   Param::NUM_THREADS = 20;
   cout << "Num Threads: " << Param::NUM_THREADS << endl;
 
-  // SetNumThreads(5);
-  // cout << AvailableThreads() << " threads created for NTL" << endl;
+  SetNumThreads(5);
+  cout << AvailableThreads() << " threads created for NTL" << endl;
 
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));
@@ -139,12 +139,10 @@ int main(int argc, char** argv) {
   for (int i = 0; i < 10; i++) {
     tic(); mpc.OrthonormalBasis(Q, Y1); toc();
   }
-  mpc.Print(Q[0], 3);
   Param::NUM_THREADS = 20;
   for (int i = 0; i < 10; i++) {
     tic(); mpc.OrthonormalBasis(Q, Y1); toc();
   }
-  mpc.Print(Q[0], 3);
 
   mpc.CleanUp();
 
