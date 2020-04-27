@@ -2863,20 +2863,20 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
 
   Init(c, out_rows, out_cols);
   Mat<ZZ_p> br, bm;
-  BeaverPartition(br, bm, b, 0);
-  // br.SetDims(b.NumRows(), b.NumCols());
-  // bm.SetDims(b.NumRows(), b.NumCols());
-  // int num_threads = (Param::NUM_THREADS <= b.NumRows()) ? Param::NUM_THREADS : b.NumRows();
-  // #pragma omp parallel for num_threads(num_threads)
-  // for (int i = 0; i < b.NumRows(); i++) {
-  //   // to avoid error with multiple threads
-  //   ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
-  //   ZZ_p::init(base_p);
+  // BeaverPartition(br, bm, b, 0);
+  br.SetDims(b.NumRows(), b.NumCols());
+  bm.SetDims(b.NumRows(), b.NumCols());
+  int num_threads = (Param::NUM_THREADS <= b.NumRows()) ? Param::NUM_THREADS : b.NumRows();
+  #pragma omp parallel for num_threads(num_threads)
+  for (int i = 0; i < b.NumRows(); i++) {
+    // to avoid error with multiple threads
+    ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
+    ZZ_p::init(base_p);
 
-  //   BeaverPartition(br[i], bm[i], b[i], 0);
-  // }
+    BeaverPartition(br[i], bm[i], b[i], 0);
+  }
 
-  int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
+  num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < out_rows; i++) {
     // to avoid error with multiple threads
@@ -2889,47 +2889,3 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
     BeaverReconstruct(c[i], 0);
   }
 }
-
-void MPCEnv::FastMultMat2(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
-  if (Param::NUM_THREADS == 1) {
-    MultMat(c, a, b);
-    return;
-  }
-  int out_rows = a.NumRows();
-  int inner_dim = a.NumCols();
-  int out_cols = b.NumCols();
-
-  Mat<ZZ_p> ar, am, br, bm;
-  BeaverPartition(ar, am, a, 0);
-  BeaverPartition(br, bm, b, 0);
-
-  Init(c, out_rows, out_cols);
-  int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
-
-  if (pid == 0) {
-    #pragma omp parallel for num_threads(num_threads)
-    for (int i = 0; i < out_rows; i++) {
-      for (int k = 0; k < inner_dim; k++) {
-        for (int j = 0; j < out_cols; j++) {
-          c[i][j] += am[i][k] * bm[k][j];
-        }
-      }
-    }
-  } else {
-    #pragma omp parallel for num_threads(num_threads)
-    for (int i = 0; i < out_rows; i++) {
-      for (int k = 0; k < inner_dim; k++) {
-        for (int j = 0; j < out_cols; j++) {
-          c[i][j] += ar[i][k] * bm[k][j];
-          c[i][j] += am[i][k] * br[k][j];
-          if (pid == 1) {
-            c[i][j] += ar[i][k] * br[k][j];
-          }
-        }
-      }
-    }
-  }
-  
-  BeaverReconstruct(c, 0);
-}
-
