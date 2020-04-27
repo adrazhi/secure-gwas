@@ -2963,37 +2963,44 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
 
   if (debug) cout << "FastMultMat: (" << out_rows << ", " << inner_dim << "), (" << inner_dim << ", " << out_cols << ")" << endl;
 
-  Mat<ZZ_p> ar, am, br, bm;
-  BeaverPartition(ar, am, a, 0);
-  BeaverPartition(br, bm, b, 0);
-
   Init(c, out_rows, out_cols);
-  int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
-
-  if (pid == 0) {
-    #pragma omp parallel for num_threads(Param::NUM_THREADS)
-    for (int i = 0; i < out_rows; i++) {
-      for (int k = 0; k < inner_dim; k++) {
-        for (int j = 0; j < out_cols; j++) {
-          c[i][j] += am[i][k] * bm[k][j];
-        }
-      }
-    }
-  } else {
-    #pragma omp parallel for num_threads(Param::NUM_THREADS)
-    for (int i = 0; i < out_rows; i++) {
-      for (int k = 0; k < inner_dim; k++) {
-        for (int j = 0; j < out_cols; j++) {
-          c[i][j] += ar[i][k] * bm[k][j];
-          c[i][j] += am[i][k] * br[k][j];
-          if (pid == 1) {
-            c[i][j] += ar[i][k] * br[k][j];
-          }
-        }
-      }
-    }
+  int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
+  #pragma omp parallel for num_threads(num_threads)
+  for (int i = 0; i < out_rows; i++) {
+    c[i] = MultMat(a[i], b);
   }
+
+  // Mat<ZZ_p> ar, am, br, bm;
+  // BeaverPartition(ar, am, a, 0);
+  // BeaverPartition(br, bm, b, 0);
+
+  // Init(c, out_rows, out_cols);
+  // int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
+
+  // if (pid == 0) {
+  //   #pragma omp parallel for num_threads(num_threads)
+  //   for (int i = 0; i < out_rows; i++) {
+  //     for (int k = 0; k < inner_dim; k++) {
+  //       for (int j = 0; j < out_cols; j++) {
+  //         c[i][j] += am[i][k] * bm[k][j];
+  //       }
+  //     }
+  //   }
+  // } else {
+  //   #pragma omp parallel for num_threads(num_threads)
+  //   for (int i = 0; i < out_rows; i++) {
+  //     for (int k = 0; k < inner_dim; k++) {
+  //       for (int j = 0; j < out_cols; j++) {
+  //         c[i][j] += ar[i][k] * bm[k][j];
+  //         c[i][j] += am[i][k] * br[k][j];
+  //         if (pid == 1) {
+  //           c[i][j] += ar[i][k] * br[k][j];
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
   
-  BeaverReconstruct(c, 0);
+  // BeaverReconstruct(c, 0);
 }
 
