@@ -1930,13 +1930,16 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
 
   Mat<ZZ_p> r;
   Mat<ZZ_p> r_low;
+  r.SetDims(a.NumRows(), a.NumCols());
+  r_low.SetDims(a.NumRows(), a.NumCols());
+
   if (pid == 0) {
     cout << "RandMatBits 0 ... "; tick();
     RandMatBitsParallel(r, a.NumRows(), a.NumCols(), k + Param::NBIT_V);
     tock();
 
     cout << "For Loop 0 ... "; tick();
-    r_low.SetDims(a.NumRows(), a.NumCols());
+  
     int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
@@ -1981,7 +1984,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
   } else if (pid == 2) {
     cout << "Receive 2 ... "; tick();
     int num_threads = a.NumRows();
-    // #pragma omp parallel for num_threads(num_threads)
+    #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
       Vec<ZZ_p> r_vec, r_low_vec;
       ReceiveVec(r_vec, 0, a.NumCols());
@@ -1996,7 +1999,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
   } else {
     cout << "Rand 1 ... "; tick();
     int num_threads = a.NumRows();
-    // #pragma omp parallel for num_threads(num_threads)
+    #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
       Vec<ZZ_p> r_mask, r_low_mask;
       SwitchSeed(1);
@@ -2916,8 +2919,6 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
     
     BeaverMult(c[i], ar, am, br, bm, 0);
     BeaverReconstruct(c[i], 0);
-
-    // MultMat(c[i], a[i], b);
   }
 
   // Mat<ZZ_p> ar, am, br, bm;
