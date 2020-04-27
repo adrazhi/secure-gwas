@@ -65,9 +65,10 @@ int main(int argc, char** argv) {
   Init(Y2, 15, 10000);
   Init(Y3, 15, 100000);
 
-  Mat<ZZ_p> C, A, B;
+  Mat<ZZ_p> C, A, B, B2;
   Init(A, 15, 1);
   Init(B, 1, 100000);
+  Init(B2, 100000, 1);
 
   if (pid == 1) {
     // Reconstruct the random mask
@@ -78,6 +79,7 @@ int main(int argc, char** argv) {
 
     mpc.RandMat(A, 15, 1);
     mpc.RandMat(B, 1, 100000);
+    mpc.RandMat(B2, 100000, 1);
     mpc.RestoreSeed();
   } else if (pid == 2) {
     // Generate data
@@ -87,6 +89,7 @@ int main(int argc, char** argv) {
 
     mpc.RandMat(A, 15, 1);
     mpc.RandMat(B, 1, 100000);
+    mpc.RandMat(B2, 100000, 1);
     
     // Mask out data
     cout << "Masking data ... ";
@@ -95,15 +98,17 @@ int main(int argc, char** argv) {
     mpc.RandMat(r1, 15, 1000);
     mpc.RandMat(r2, 15, 10000);
     mpc.RandMat(r3, 15, 100000);
-    Mat<ZZ_p> r4, r5;
+    Mat<ZZ_p> r4, r5, r6;
     mpc.RandMat(r4, 15, 1);
     mpc.RandMat(r5, 1, 100000);
+    mpc.RandMat(r6, 100000, 1);
     mpc.RestoreSeed();
     Y1 -= r1;
     Y2 -= r2;
     Y3 -= r3;
     A -= r4;
     B -= r5;
+    B2 -= r6;
     cout << "done" << endl;
   }
 
@@ -113,14 +118,12 @@ int main(int argc, char** argv) {
   tic(); mpc.FastMultMat(C, A, B); toc();
   tic(); mpc.FastTrunc(C); toc();
   cout << "----" << endl;
-  transpose(B);
-  tic(); mpc.MultMat(C, Y3, B); toc();
+  tic(); mpc.MultMat(C, Y3, B2); toc();
   tic(); mpc.Trunc(C); toc();
   cout << "----" << endl;
-  tic(); mpc.FastMultMat(C, Y3, B); toc();
+  tic(); mpc.FastMultMat(C, Y3, B2); toc();
   tic(); mpc.FastTrunc(C); toc();
   cout << "----" << endl;
-  transpose(B);
   tic(); mpc.FastMultMat2(C, A, B); toc();
   tic(); mpc.FastTrunc(C); toc();
 
