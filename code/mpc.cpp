@@ -941,8 +941,7 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   for (int i = 0; i < c; i++) {
     Mat<ZZ_p> v;
     v.SetDims(1, Ap.NumCols());
-    cout << "Householder ... "; tick();
-    Householder(v[0], Ap[0]); tock();
+    Householder(v[0], Ap[0]);
 
     if (pid == 0) {
       v_list[i].SetLength(Ap.NumCols());
@@ -957,17 +956,13 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       transpose(vt, v);
     }
 
-    cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Apv;
-    FastMultMat(Apv, Ap, vt); tock();
-    cout << "Trunc ... "; tick();
-    Trunc(Apv); tock();
+    FastMultMat(Apv, Ap, vt);
+    Trunc(Apv);
 
-    cout << "Multiplication ... "; tick();
     Mat<ZZ_p> B;
-    FastMultMat(B, Apv, v); tock();
-    cout << "Trunc ... "; tick();
-    FastTrunc(B); tock();
+    FastMultMat(B, Apv, v);
+    FastTrunc(B);
     if (pid > 0) {
       B *= -2;
       B += Ap;
@@ -993,8 +988,6 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
     }
   }
 
-  cout << "second loop" << endl;
-
   for (int i = c - 1; i >= 0; i--) {
     Mat<ZZ_p> v;
     v.SetDims(1, v_list[i].length());
@@ -1019,16 +1012,12 @@ void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
       }
     }
 
-    cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Qv;
-    MultMat(Qv, Qsub, vt); tock();
-    cout << "Trunc ... "; tick();
-    Trunc(Qv); tock();
+    FastMultMat(Qv, Qsub, vt);
+    Trunc(Qv);
 
-    cout << "Multiplication ... "; tick();
     Mat<ZZ_p> Qvv;
-    MultMat(Qvv, Qv, v); tock();
-    cout << "Trunc ... "; tick();
+    FastMultMat(Qvv, Qv, v); tock();
     FastTrunc(Qvv); tock();
     if (pid > 0) {
       Qvv *= -2;
@@ -2863,20 +2852,9 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
 
   Init(c, out_rows, out_cols);
   Mat<ZZ_p> br, bm;
-  // BeaverPartition(br, bm, b, 0);
-  br.SetDims(b.NumRows(), b.NumCols());
-  bm.SetDims(b.NumRows(), b.NumCols());
-  int num_threads = (Param::NUM_THREADS <= b.NumRows()) ? Param::NUM_THREADS : b.NumRows();
-  #pragma omp parallel for num_threads(num_threads)
-  for (int i = 0; i < b.NumRows(); i++) {
-    // to avoid error with multiple threads
-    ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
-    ZZ_p::init(base_p);
+  BeaverPartition(br, bm, b, 0);
 
-    BeaverPartition(br[i], bm[i], b[i], 0);
-  }
-
-  num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
+  int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < out_rows; i++) {
     // to avoid error with multiple threads
