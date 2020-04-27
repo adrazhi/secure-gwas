@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   Init(Y2, 15, 10000);
   Init(Y3, 15, 100000);
 
-  Vec<ZZ_P> V1, V2;
+  Vec<ZZ_p> V1, V2;
   Init(V1, 100000);
   Init(V2, 100000);
 
