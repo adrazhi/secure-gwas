@@ -2967,7 +2967,7 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
   int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < out_rows; i++) {
-    c[i] = MultMat(a[i], b);
+    MultMat(c[i], a[i], b);
   }
 
   // Mat<ZZ_p> ar, am, br, bm;
