@@ -1798,8 +1798,11 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   nbatch = ceil(n / ((double) batch_size));
 
   if (debug) cout << "FPDiv with number of threads: " << Param::NUM_THREADS << endl;
+  cout << "FPDiv with number of threads: " << Param::NUM_THREADS << endl;
 
   c.SetLength(n);
+
+  cout << "test 1";
 
   #pragma omp parallel for num_threads(Param::NUM_THREADS)
   for (int i = 0; i < nbatch; i++) {
