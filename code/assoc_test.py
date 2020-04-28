@@ -9,12 +9,12 @@ x2 = np.loadtxt(pref2 + "_assoc.txt")
 def get_gkeep(pref):
 	gkeep = np.loadtxt(pref + "_gkeep1.txt")
 	gkeep2 = np.loadtxt(pref + "_gkeep2.txt")
-	ind = 0;
-    for j in range(gkeep.shape[0]):
-    	if gkeep[j] == 1:
-    		gkeep[j] = gkeep2[ind] == 1
-    		ind += 1
-    return gkeep
+	ind = 0
+	for j in range(gkeep.shape[0]):
+		if gkeep[j] == 1:
+			gkeep[j] = gkeep2[ind] == 1
+			ind += 1
+	return gkeep
 
 if (x1.shape != x2.shape):
 	gkeep1 = get_gkeep(pref1)
