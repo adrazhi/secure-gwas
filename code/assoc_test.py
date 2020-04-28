@@ -9,9 +9,9 @@ x2 = np.loadtxt(pref2 + "_assoc.txt")
 if (x1.shape != x2.shape):
 	gkeep1 = np.loadtxt(pref1 + "_gkeep1.txt") & np.loadtxt(pref1 + "_gkeep2.txt")
 	gkeep2 = np.loadtxt(pref2 + "_gkeep1.txt") & np.loadtxt(pref2 + "_gkeep2.txt")
-	int ind1 = 0
-	int ind2 = 0
-	for int i in range(gkeep1.shape[0]):
+	ind1 = 0
+	ind2 = 0
+	for i in range(gkeep1.shape[0]):
 		if gkeep1[i] == 1 and gkeep2[i] == 1:
 			ind1 += 1
 			ind2 += 1
