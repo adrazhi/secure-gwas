@@ -1657,12 +1657,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     cout << "Caching input data for PCA:" << endl;
 
-    Vec<Vec<ZZ_p>> miss, miss_mask, dosage, dosage_mask;
-    miss.SetLength(n1);
-    miss_mask.SetLength(n1);
-    dosage.SetLength(n1);
-    dosage_mask.SetLength(n1);
-
     // Loop over all datasets
     #pragma omp parallel for num_threads(num_threads)
     for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
@@ -1752,10 +1746,12 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
         // Filter out loci that failed missing rate filter
         Mat<ZZ_p> g, g_mask;
+        Vec<ZZ_p> miss, miss_mask;
         g.SetDims(3, m3);
         g_mask.SetDims(3, m3);
-        miss[i].SetLength(m3);
-        miss_mask[i].SetLength(m3);
+        miss.SetLength(m3);
+        miss_mask.SetLength(m3);
+
         int ind2 = 0;
         for (int j = 0; j < m0; j++) {
           if (gkeep3[j]) {
@@ -1763,24 +1759,25 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
               g[k][ind2] = g0[k][j];
               g_mask[k][ind2] = g0_mask[k][j];
             }
-            miss[i][ind2] = miss0[j];
-            miss_mask[i][ind2] = miss0_mask[j];
+            miss[ind2] = miss0[j];
+            miss_mask[ind2] = miss0_mask[j];
             ind2++;
           }
         }
 
-        dosage[i] = g[1] + 2 * g[2];
-        dosage_mask[i] = g_mask[1] + 2 * g_mask[2];
+        Vec<ZZ_p> dosage, dosage_mask;
+        dosage = g[1] + 2 * g[2];
+        dosage_mask = g_mask[1] + 2 * g_mask[2];
 
-        mpc.BeaverWriteToFile(dosage[i], dosage_mask[i], inner_fs);
-        mpc.BeaverWriteToFile(miss[i], miss_mask[i], inner_fs);
+        mpc.BeaverWriteToFile(dosage, dosage_mask, inner_fs);
+        mpc.BeaverWriteToFile(miss, miss_mask, inner_fs);
 
         if ((i - offset + 1) % bsize == 0 || (i - offset) == inner_n1 - 1) {
           cout << "\t" << i+1 << " / " << n1 << ", "; toc(); tic();
         }
       }
       inner_ifs.close();
-      fs.close();
+      inner_fs.close();
     }
   }
 
@@ -2183,7 +2180,6 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       if (pit == 0) {
         cout << "done. "; toc();
       }
-      mpc.ProfilerPopState(false); // file_io
 
       mpc.BeaverReconstruct(gQ);
       mpc.BeaverReconstruct(gQ_adj);
