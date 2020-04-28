@@ -1772,8 +1772,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         dosage[i] = g[1] + 2 * g[2];
         dosage_mask[i] = g_mask[1] + 2 * g_mask[2];
 
-        mpc.BeaverWriteToFile(dosage[i], dosage_mask[i], fs);
-        mpc.BeaverWriteToFile(miss[i], miss_mask[i], fs);
+        mpc.BeaverWriteToFile(dosage[i], dosage_mask[i], inner_fs);
+        mpc.BeaverWriteToFile(miss[i], miss_mask[i], inner_fs);
 
         if ((i - offset + 1) % bsize == 0 || (i - offset) == inner_n1 - 1) {
           cout << "\t" << i+1 << " / " << n1 << ", "; toc(); tic();
