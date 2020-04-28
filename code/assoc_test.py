@@ -6,9 +6,19 @@ pref2 = sys.argv[2]
 x1 = np.loadtxt(pref1 + "_assoc.txt")
 x2 = np.loadtxt(pref2 + "_assoc.txt")
 
+def get_gkeep(pref):
+	gkeep = np.loadtxt(pref + "_gkeep1.txt")
+	gkeep2 = np.loadtxt(pref + "_gkeep2.txt")
+	ind = 0;
+    for j in range(gkeep.shape[0]):
+    	if gkeep[j] == 1:
+    		gkeep[j] = gkeep2[ind] == 1
+    		ind += 1
+    return gkeep
+
 if (x1.shape != x2.shape):
-	gkeep1 = np.loadtxt(pref1 + "_gkeep1.txt") & np.loadtxt(pref1 + "_gkeep2.txt")
-	gkeep2 = np.loadtxt(pref2 + "_gkeep1.txt") & np.loadtxt(pref2 + "_gkeep2.txt")
+	gkeep1 = get_gkeep(pref1)
+	gkeep2 = get_gkeep(pref2)
 	ind1 = 0
 	ind2 = 0
 	for i in range(gkeep1.shape[0]):
