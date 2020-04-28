@@ -1877,7 +1877,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       #pragma omp critical ( Y_cur_adj_update )
         Y_cur_adj += inner_Y_cur_adj;
       #pragma omp critical ( bucket_count_update )
-        bucket_count += inner_bucket_count;
+        for (int i = 0; i < kp; i++) {
+          bucket_count[i] = bucket_count[i] + inner_bucket_count[i];
+        }
     }
 
     // Subtract the adjustment factor
