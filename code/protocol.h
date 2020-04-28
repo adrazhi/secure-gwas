@@ -2007,7 +2007,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       mpc.ProfilerPushState("file_io");
       if (pit == 0) {
-        cout << "Data scan 1 ... "; tic();
+        cout << "Iter 1: Data Scan 1 ... "; tic();
       }
       #pragma omp parallel for num_threads(num_threads)
       for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
@@ -2081,7 +2081,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       }
 
       if (pit == 0) {
-        cout << "Orthonormal basis 1 ... "; tic();
+        cout << "Iter 1: OrthonormalBasis 1 ... "; tic();
       }
       mpc.Transpose(gQ); // kp-by-n1
       mpc.ProfilerPushState("qr_n");
@@ -2102,7 +2102,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       // Pass 2
       mpc.ProfilerPushState("file_io");
       if (pit == 0) {
-        cout << "Data scan 2 ... "; tic();
+        cout << "Iter 1: Data Scan 2 ... "; tic();
       }
       #pragma omp parallel for num_threads(num_threads)
       for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
@@ -2217,7 +2217,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       mpc.ProfilerPushState("qr_m");
       if (pit == 0) {
-        cout << "Orthonormal basis 2 ... "; tic();
+        cout << "Iter 1: Orthonormal Basis 2 ... "; tic();
       }
       mpc.OrthonormalBasis(Q, gQ_scaled);
       if (pit == 0) {
