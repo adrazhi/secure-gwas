@@ -2770,7 +2770,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   mpc.FastTrunc(spsx);
   mpc.FastTrunc(sp2);
-  mpc.FastTrunc(sx2);
+  mpc.Trunc(sx2);
 
   Vec<ZZ_p> numer, denom;
   Init(numer, m2);
