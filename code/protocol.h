@@ -2104,12 +2104,12 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       mpc.ProfilerPushState("data_scan2");
 
       // Pass 2
-      mpc.ProfilerPushState("file_io");
       if (pit == 0) {
         cout << "Iter 1: Data Scan 2 ... "; tic();
       }
       #pragma omp parallel for num_threads(num_threads)
       for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
+        mpc.ProfilerPushState("file_io");
         ifstream inner_ifs;
         inner_ifs.open(cache(pid, dataset_idx, "pca_input").c_str(), ios::in | ios::binary);
 
