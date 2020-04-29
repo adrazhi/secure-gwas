@@ -1921,7 +1921,7 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
     Trunc(a, k, m);
     return;
   }
-  int num_threads = a.NumRows();
+  int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
 
   Mat<ZZ_p> r;
   Mat<ZZ_p> r_low;
@@ -1946,9 +1946,6 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
 
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
-      ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
-      ZZ_p::init(base_p);
-
       Vec<ZZ_p> r_mask, r_low_mask;
       SwitchSeed(1);
       RandVec(r_mask, a.NumCols());
@@ -1962,9 +1959,6 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
   } else if (pid == 2) {
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
-      ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
-      ZZ_p::init(base_p);
-
       Vec<ZZ_p> r_vec, r_low_vec;
       ReceiveVec(r_vec, 0, a.NumCols());
       ReceiveVec(r_low_vec, 0, a.NumCols());
@@ -1974,9 +1968,6 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
   } else {
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
-      ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
-      ZZ_p::init(base_p);
-
       Vec<ZZ_p> r_mask, r_low_mask;
       SwitchSeed(0);
       RandVec(r_mask, a.NumCols());
@@ -1996,9 +1987,6 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
 
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < a.NumRows(); i++) {
-    ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
-    ZZ_p::init(base_p);
-
     RevealSym(c[i]);
   }
   
@@ -2008,10 +1996,6 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
     int num_threads = (Param::NUM_THREADS <= a.NumRows()) ? Param::NUM_THREADS : a.NumRows();
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < a.NumRows(); i++) {
-      // to avoid error with multiple threads
-      ZZ base_p = conv<ZZ>(Param::BASE_P.c_str());
-      ZZ_p::init(base_p);
-
       for (int j = 0; j < a.NumCols(); j++) {
         c_low[i][j] = conv<ZZ_p>(trunc_ZZ(rep(c[i][j]), m));
       }
