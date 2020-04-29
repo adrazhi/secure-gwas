@@ -2742,8 +2742,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   sp *= fp_n1_inv;
 
   mpc.FastTrunc(sx);
-  mpc.FastTrunc(sp);
-  mpc.FastTrunc(spp);
+  mpc.Trunc(sp);
+  mpc.Trunc(spp);
 
   Vec<ZZ_p> sx_mask;
   mpc.BeaverPartition(sx_mask, sx);
