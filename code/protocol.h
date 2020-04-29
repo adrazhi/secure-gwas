@@ -564,14 +564,13 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid, int n, int chunk_id) {
 }
 
 bool gwas_protocol(MPCEnv& mpc, int pid) {
-  // note: NTL Thread Boosting significantly less effective than custom multi-threading
-  // so the protocol uses custom multi-threading by default
-  if (Param::NTL_THREAD_BOOSTING) {
-    SetNumThreads(Param::NUM_THREADS - 1);
-    cout << AvailableThreads() << " threads created for NTL" << endl;
-    Param::NUM_THREADS = 1;
-  }
+  SetNumThreads(Param::NTL_NUM_THREADS);
+  cout << AvailableThreads() << " threads created for NTL" << endl;
 
+  // keep track of if we want to use both NTL thread boosting and custom multi-threading
+  // this way we can switch between the two without overloading the CPU with too many threads
+  bool toggle_threads = (Param::NTL_NUM_THREADS > 1) && (Param::NUM_THREADS > 1);
+  
   int n0 = 0; // total number of individuals across datasets
   for (int i = 0; i < Param::NUM_INDS.size(); i++) {
     n0 += Param::NUM_INDS[i];
@@ -593,7 +592,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   Mat<ZZ_p> tmp_mat;
 
   int num_datasets = Param::NUM_INDS.size();
-  int num_threads = (Param::NUM_THREADS < num_datasets) ? Param::NUM_THREADS : num_datasets;
+  int num_threads = Param::NUM_THREADS;
 
   mpc.ProfilerPushState("main");
 
@@ -637,6 +636,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   cout << "Initial data sharing results found" << endl;
 
+  // disable NTL Thread boosting before custom multi-threaded region
+  if (toggle_threads) SetNumThreads(1);
+
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < num_datasets; i++) {
     long offset = 0;
@@ -670,6 +672,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   }
 
   cout << "Phenotypes and covariates loaded" << endl;
+
+  // re-enable NTL Thread boosting after custom multi-threaded region
+  if (toggle_threads) SetNumThreads(Param::NTL_NUM_THREADS);
 
   if (Param::DEBUG) {
     cout << "pheno" << endl;
@@ -734,6 +739,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         cout << "Taking a pass to calculate locus missing rates:" << endl;
 
         if (pid > 0) {
+          if (toggle_threads) SetNumThreads(1);
+
           // Loop over all datasets to calculate missing rate across all individuals
           #pragma omp parallel for num_threads(num_threads)
           for (int i = 0; i < num_datasets; i++) {
@@ -789,6 +796,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
             #pragma omp critical ( gmiss_update )
               gmiss += inner_gmiss;
           }
+          if (toggle_threads) SetNumThreads(Param::NTL_NUM_THREADS);
         }
 
         fs.open(cache(pid, "gmiss").c_str(), ios::out | ios::binary);
@@ -895,6 +903,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         mpc.ProfilerPushState("data_scan");
 
         if (pid > 0) {
+          if (toggle_threads) SetNumThreads(1);
+
           // Loop over all datasets to calculate individual missing/heterozygous rate for all individuals
           #pragma omp parallel for num_threads(num_threads)
           for (int i = 0; i < num_datasets; i++) {
@@ -954,6 +964,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
             }
             inner_ifs.close();
           }
+          if (toggle_threads) SetNumThreads(Param::NTL_NUM_THREADS);
         }
 
         fs.open(cache(pid, "imiss_ihet").c_str(), ios::out | ios::binary);
@@ -1098,6 +1109,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     // in replicating dosage, g, miss, etc across all threads
     long bsize = Param::PITER_BATCH_SIZE / num_threads;
     long report_bsize = n1 / 10;
+    if (toggle_threads) SetNumThreads(1);
 
     // Loop over all datasets to calculate genotype statistics over all individuals
     #pragma omp parallel for num_threads(num_threads)
@@ -1300,6 +1312,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
       inner_ifs.close();
     }
+
+    if (toggle_threads) SetNumThreads(Param::NTL_NUM_THREADS);
 
     mpc.BeaverReconstruct(gmiss_ctrl);
     mpc.BeaverReconstruct(dosage_sum_ctrl);
@@ -1661,6 +1675,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     cout << "Caching input data for PCA:" << endl;
 
+    if (toggle_threads) SetNumThreads(1);
+
     // Loop over all datasets
     #pragma omp parallel for num_threads(num_threads)
     for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
@@ -1783,6 +1799,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       inner_ifs.close();
       inner_fs.close();
     }
+    if (toggle_threads) SetNumThreads(Param::NTL_NUM_THREADS);
   }
 
   mpc.ProfilerPopState(false); // reduce_file
@@ -1823,6 +1840,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     for (int i = 0; i < kp; i++) {
       bucket_count[i] = 0;
     }
+    if (toggle_threads) SetNumThreads(1);
 
     #pragma omp parallel for num_threads(num_threads)
     for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
@@ -1882,6 +1900,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           bucket_count[i] = bucket_count[i] + inner_bucket_count[i];
         }
     }
+    if (toggle_threads) SetNumThreads(Param::NTL_NUM_THREADS);
 
     // Subtract the adjustment factor
     mpc.BeaverReconstruct(Y_cur_adj);
@@ -2012,6 +2031,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       if (pit == 0) {
         cout << "Iter 1: Data Scan 1 ... "; tic();
       }
+      if (toggle_threads) SetNumThreads(1);
+
       #pragma omp parallel for num_threads(num_threads)
       for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
         mpc.ProfilerPushState("file_io");
@@ -2068,6 +2089,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         miss.kill();
         miss_mask.kill();
       }
+      if (toggle_threads) SetNumThreads(Param::NTL_NUM_THREADS);
       if (pit == 0) {
         cout << "done. "; toc();
       }
@@ -2107,6 +2129,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       if (pit == 0) {
         cout << "Iter 1: Data Scan 2 ... "; tic();
       }
+      if (toggle_threads) SetNumThreads(1);
+
       #pragma omp parallel for num_threads(num_threads)
       for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
         mpc.ProfilerPushState("file_io");
@@ -2181,6 +2205,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         inner_gQ.kill();
         inner_gQ_adj.kill();
       }
+      if (toggle_threads) SetNumThreads(Param::NTL_NUM_THREADS);
       if (pit == 0) {
         cout << "done. "; toc();
       }
@@ -2472,7 +2497,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     tic();
     mpc.ProfilerPushState("file_io/rng");
     cout << "GWAS pass:" << endl;
-
+    if (toggle_threads) SetNumThreads(1);
+    
     #pragma omp parallel for num_threads(num_threads)
     for (int dataset_idx = 0; dataset_idx < Param::NUM_INDS.size(); dataset_idx++) {
       Mat<ZZ_p> dosage, dosage_mask;
@@ -2656,6 +2682,8 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         B += inner_B;
     }
     mpc.ProfilerPopState(false); // file_io/rng
+
+    if (toggle_threads) SetNumThreads(Param::NTL_NUM_THREADS);
 
     mpc.BeaverReconstruct(sx);
     mpc.BeaverReconstruct(sxp);

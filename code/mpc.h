@@ -1427,12 +1427,14 @@ public:
   void RandMatBitsParallel(Mat<ZZ_p>& a, int nrows, int ncols, int bitlen) {
     a.SetDims(nrows, ncols);
     int num_threads = (Param::NUM_THREADS <= nrows) ? Param::NUM_THREADS : nrows;
+    if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(1);
     #pragma omp parallel for num_threads(num_threads)
     for (int i = 0; i < nrows; i++) {
       int thread = omp_get_thread_num();
       for (int j = 0; j < ncols; j++)
         a[i][j] = conv<ZZ_p>(RandomBits_ZZ(bitlen, prg.find(thread)->second.find(cur_prg_pid.find(thread)->second)->second));
     }
+    if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(Param::NTL_NUM_THREADS);
   }
   
   // a contains column indices (1-based) into cached tables

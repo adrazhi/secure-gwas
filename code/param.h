@@ -76,9 +76,9 @@ class Param {
     static uint64_t MPC_BUF_SIZE; // size of data buffer in bytes
     static long DIV_MAX_N; // maximum number of parallel divisions/sqrts
     static long PITER_BATCH_SIZE; // size of batch processing of genomes
-    static bool NTL_THREAD_BOOSTING; // represents whether we want to use NTL thread boosting (as opposed to custom multi-threading)
     static long PAR_THRES; // minimum threshold for NTL thread-boosting
-    static long NUM_THREADS; // number of threads for NTL thread-boosting or custom multi-threading
+    static long NTL_NUM_THREADS; // number of threads for NTL thread-boosting
+    static long NUM_THREADS; // number of threads for custom multi-threading
     static bool CHUNK_MODE; // represents whether we want to share each dataset chunkwise (in parallel)
     static vector<long> NUM_CHUNKS; // number of chunks per dataset for chunked data-sharing
 

@@ -87,10 +87,10 @@ bool Param::ParseFile(const char *param_file) {
       ret = Convert(v, Param::BASE_P, k);
     } else if (k == "DIV_MAX_N") {
       ret = Convert(v, Param::DIV_MAX_N, k);
-    } else if (k == "NTL_THREAD_BOOSTING") {
-      ret = Convert(v, Param::NTL_THREAD_BOOSTING, k);
     } else if (k == "PAR_THRES") {
       ret = Convert(v, Param::PAR_THRES, k);
+    } else if (k == "NTL_NUM_THREADS") {
+      ret = Convert(v, Param::NTL_NUM_THREADS, k);
     } else if (k == "NUM_THREADS") {
       ret = Convert(v, Param::NUM_THREADS, k);
     } else if (k == "CHUNK_MODE") {
@@ -207,7 +207,7 @@ long Param::NUM_COVS = 10;
 
 long Param::PITER_BATCH_SIZE = 100;
 long Param::PAR_THRES = 50;
-bool Param::NTL_THREAD_BOOSTING = false;
+long Param::NTL_NUM_THREADS = 1;
 long Param::NUM_THREADS = 20;
 bool Param::CHUNK_MODE = false;
 vector<long> Param::NUM_CHUNKS;
