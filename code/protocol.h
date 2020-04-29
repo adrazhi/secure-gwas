@@ -564,9 +564,13 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid, int n, int chunk_id) {
 }
 
 bool gwas_protocol(MPCEnv& mpc, int pid) {
-  // NTL Thread Boosting significantly less effective than custom parallelization
-  // SetNumThreads(Param::NUM_THREADS);
-  // cout << AvailableThreads() << " threads created for NTL" << endl;
+  // note: NTL Thread Boosting significantly less effective than custom multi-threading
+  // so the protocol uses custom multi-threading by default
+  if (Param::NTL_THREAD_BOOSTING) {
+    SetNumThreads(Param::NUM_THREADS - 1);
+    cout << AvailableThreads() << " threads created for NTL" << endl;
+    Param::NUM_THREADS = 1;
+  }
 
   int n0 = 0; // total number of individuals across datasets
   for (int i = 0; i < Param::NUM_INDS.size(); i++) {
