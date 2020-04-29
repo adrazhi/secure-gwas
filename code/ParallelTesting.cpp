@@ -53,7 +53,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  vector<int> num_threads{ 1, 2, 4, 8, 16, 32, 64 };
+  // vector<int> num_threads{ 1, 2, 4, 8, 16, 32, 64 };
+  vector<int> num_threads{ 32, 64 };
   Param::NUM_THREADS = 64; // need this so that mpc.Initialize will create enough channels/prgs for up to 16 threads
 
   string n_str(argv[3]);
@@ -123,8 +124,8 @@ int main(int argc, char** argv) {
   double runtime;
 
   // output flags
-  bool fpdiv = false;
-  bool fpsqrt = false;
+  bool fpdiv = true;
+  bool fpsqrt = true;
   bool ispos = true;
   bool print_output = false;
 
