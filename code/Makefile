@@ -1,6 +1,6 @@
 CPP = /usr/bin/clang++-3.9
 INCPATHS = -I/usr/local/include
-CFLAGS = -g -Wall -O1 $(INCPATHS) -march=native -std=c++11 -pthread -fopenmp
+CFLAGS = -g -Wall -Os $(INCPATHS) -march=native -std=c++11 -pthread -fopenmp
 LDLIBS = -lssl -lcrypto -lntl -lgmp -lm -ldl
 LDPATH = -L/usr/local/lib
 
