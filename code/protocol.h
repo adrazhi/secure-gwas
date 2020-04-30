@@ -1388,7 +1388,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   // Variance based on Bernoulli distribution over each allele
   Vec<ZZ_p> g_var_bern;
   mpc.MultElem(g_var_bern, maf, Maf);
-  mpc.FastTrunc(g_var_bern);
+  mpc.Trunc(g_var_bern);
 
   mpc.ProfilerPopState(true); // maf
 
@@ -1464,7 +1464,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       }
       g_exp_ctrl *= twoinv; // dosage_tot_ctrl is twice the # individuals we actually want
 
-      mpc.FastTrunc(g_exp_ctrl);
+      mpc.Trunc(g_exp_ctrl);
 
       cout << "\tCalculated expected genotype counts, "; toc(); tic();
 
@@ -1486,7 +1486,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           }
 
           mpc.MultElem(diff, diff, diff); // square
-          mpc.FastTrunc(diff);
+          mpc.Trunc(diff);
 
           mpc.ProfilerPushState("div");
           mpc.FPDivParallel(tmp_vec, diff, g_exp_ctrl[i]);
@@ -1908,7 +1908,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     kp = empty_slot;
     cout << "kp: " << kp << endl;
     Y_cur.SetDims(kp, m3);
-    mpc.FastTrunc(Y_cur);
+    mpc.Trunc(Y_cur);
 
     mpc.ProfilerPopState(true); // rand_proj
 
@@ -1950,7 +1950,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     Y_cur_mask.kill();
 
     mpc.BeaverReconstruct(Y);
-    mpc.FastTrunc(Y);
+    mpc.Trunc(Y);
 
     /* Calculate orthonormal bases of Y */
     cout << "Initial orthonormal basis ... "; tic();
@@ -1977,7 +1977,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         mpc.BeaverMultElem(Q_scaled[i], Q[i], Q_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
       }
       mpc.BeaverReconstruct(Q_scaled);
-      mpc.FastTrunc(Q_scaled);
+      mpc.Trunc(Q_scaled);
 
       mpc.BeaverPartition(Q_scaled_mask, Q_scaled);
 
@@ -1988,7 +1988,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
                            g_mean_pca, g_mean_pca_mask);
       }
       mpc.BeaverReconstruct(Q_scaled_gmean);
-      mpc.FastTrunc(Q_scaled_gmean);
+      mpc.Trunc(Q_scaled_gmean);
 
       mpc.Transpose(Q_scaled); // m3-by-kp
       transpose(Q_scaled_mask, Q_scaled_mask); // m3-by-kp, unlike mpc.Transpose, P0 also transposes
@@ -2197,7 +2197,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
                            g_mean_pca, g_mean_pca_mask);
       }
       mpc.BeaverReconstruct(gQ_adj_gmean);
-      mpc.FastTrunc(gQ_adj_gmean);
+      mpc.Trunc(gQ_adj_gmean);
 
       if (pid > 0) {
         gQ -= gQ_adj_gmean;
@@ -2214,7 +2214,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         mpc.BeaverMultElem(gQ_scaled[i], gQ[i], gQ_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
       }
       mpc.BeaverReconstruct(gQ_scaled);
-      mpc.FastTrunc(gQ_scaled);
+      mpc.Trunc(gQ_scaled);
 
       mpc.ProfilerPushState("qr_m");
       if (pit == 0) {
@@ -2266,7 +2266,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     ZZ_p fp_m2_inv = DoubleToFP(1 / ((double) m2), Param::NBIT_K, Param::NBIT_F);
     Z *= fp_m2_inv;
-    mpc.FastTrunc(Z);
+    mpc.Trunc(Z);
 
     mpc.Transpose(Z); // kp-by-n1
 
@@ -2280,7 +2280,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       mpc.BeaverMult(Z_gram[i], Z, Z_mask, Z[i], Z_mask[i]);
     }
     mpc.BeaverReconstruct(Z_gram);
-    mpc.FastTrunc(Z_gram);
+    mpc.Trunc(Z_gram);
 
     cout << "Constructed reduced eigenvalue problem" << endl;
 
@@ -2324,7 +2324,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     U_mask.kill();
     Z_mask.kill();
     mpc.BeaverReconstruct(V);
-    mpc.FastTrunc(V);
+    mpc.Trunc(V);
 
     fs.open(cache(pid, "eigen").c_str(), ios::out | ios::binary);
     if (pid > 0) {
@@ -2379,7 +2379,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   Init(VVp, n1);
   mpc.BeaverMult(VVp, Vp, Vp_mask, V, V_mask);
   mpc.BeaverReconstruct(VVp);
-  mpc.FastTrunc(VVp);
+  mpc.Trunc(VVp);
 
   Vec<ZZ_p> VVp_mask;
   mpc.BeaverPartition(VVp_mask, VVp);
@@ -2409,7 +2409,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   Init(u, n1);
   mpc.BeaverMult(u, V_sum, V_sum_mask, V, V_mask);
   mpc.BeaverReconstruct(u);
-  mpc.FastTrunc(u);
+  mpc.Trunc(u);
   if (pid > 0) {
     u *= -1;
     mpc.AddPublic(u, fp_one);
@@ -2687,7 +2687,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   Vec<ZZ_p> BB;
   mpc.InnerProd(BB, B); // m2
-  mpc.FastTrunc(BB);
+  mpc.Trunc(BB);
   if (pid > 0) {
     sxx -= BB;
   }
@@ -2710,7 +2710,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   sx *= fp_n1_inv;
   sp *= fp_n1_inv;
 
-  mpc.FastTrunc(sx);
+  mpc.Trunc(sx);
   mpc.Trunc(sp);
   mpc.Trunc(spp);
 
@@ -2737,9 +2737,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   sp2 *= n1;
   sx2 *= n1;
 
-  mpc.FastTrunc(spsx);
+  mpc.Trunc(spsx);
   mpc.Trunc(sp2);
-  mpc.FastTrunc(sx2);
+  mpc.Trunc(sx2);
 
   Vec<ZZ_p> numer, denom;
   Init(numer, m2);
@@ -2780,10 +2780,10 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   Vec<ZZ_p> z;
   mpc.MultElem(z, numer, denom1_sqrt_inv);
-  mpc.FastTrunc(z);
+  mpc.Trunc(z);
 
   mpc.MultMat(z, z, denom2_sqrt_inv);
-  mpc.FastTrunc(z);
+  mpc.Trunc(z);
 
   mpc.ProfilerPopState(false); // assoc_test
 
