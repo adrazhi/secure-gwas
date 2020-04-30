@@ -1461,7 +1461,7 @@ void MPCEnv::IsPositiveParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
   if (debug) cout << "IsPositive with number of threads: " << nbatch << endl;
 
   b.SetLength(n);
-  if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(1);
+
   #pragma omp parallel for num_threads(Param::NUM_THREADS)
   for (int i = 0; i < nbatch; i++) {
     int start = batch_size * i;
@@ -1486,7 +1486,6 @@ void MPCEnv::IsPositiveParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
       b[start + j] = b_copy[j];
     }
   }
-  if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(Param::NTL_NUM_THREADS);
 }
 
 void MPCEnv::FlipBit(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
@@ -1631,7 +1630,6 @@ void MPCEnv::FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
 
   b.SetLength(n);
   b_inv.SetLength(n);
-  if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(1);
 
   #pragma omp parallel for num_threads(Param::NUM_THREADS)
   for (int i = 0; i < nbatch; i++) {
@@ -1661,7 +1659,6 @@ void MPCEnv::FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
       b_inv[start + j] = b_inv_copy[j];
     }
   }
-  if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(Param::NTL_NUM_THREADS);
 }
 
 void MPCEnv::FPDiv(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
@@ -1803,7 +1800,6 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
   if (debug) cout << "FPDiv with number of threads: " << Param::NUM_THREADS << endl;
 
   c.SetLength(n);
-  if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(1);
 
   #pragma omp parallel for num_threads(Param::NUM_THREADS)
   for (int i = 0; i < nbatch; i++) {
@@ -1834,7 +1830,6 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
       c[start + j] = c_copy[j];
     }
   }
-  if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(Param::NTL_NUM_THREADS);
 }
 
 void MPCEnv::Trunc(Mat<ZZ_p>& a, int k, int m) {
@@ -1928,8 +1923,6 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
   r.SetDims(a.NumRows(), a.NumCols());
   r_low.SetDims(a.NumRows(), a.NumCols());
 
-  if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(1);
-
   if (pid == 0) {
     RandMatBitsParallel(r, a.NumRows(), a.NumCols(), k + Param::NBIT_V);
   
@@ -2001,7 +1994,6 @@ void MPCEnv::FastTrunc(Mat<ZZ_p>& a, int k, int m) {
       }
     }
   }
-  if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(Param::NTL_NUM_THREADS);
 
   if (pid > 0) {
     a += r_low;
@@ -2859,7 +2851,6 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
   BeaverPartition(br, bm, b, 0);
 
   int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
-  if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(1);
 
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < out_rows; i++) {
@@ -2872,5 +2863,4 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
     BeaverMult(c[i], ar, am, br, bm, 0);
     BeaverReconstruct(c[i], 0);
   }
-  if (Param::NTL_NUM_THREADS > 1 && Param::NUM_THREADS > 1) SetNumThreads(Param::NTL_NUM_THREADS);
 }

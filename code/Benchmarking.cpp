@@ -60,17 +60,16 @@ int main(int argc, char** argv) {
 
   // OrthonormalBasis Benchmarking
 
-  // // Initialize matrices to hold inputs and outputs
+  // Initialize matrices to hold inputs and outputs
   Mat<ZZ_p> Y1, Y2, Y3, Q;
-  Init(Y1, 15, 2000);
-  Init(Y2, 15, 20000);
-  Init(Y3, 15, 200000);
+  Init(Y1, 1, 2000);
+  Init(Y2, 1, 20000);
+  Init(Y3, 1, 200000);
 
-  // Mat<ZZ_p> C, A, B, B2;
-  // Init(A, 15, 1);
-  // Init(B, 1, 100000);
-  // Init(B2, 100000, 1);
-
+  Mat<ZZ_p> C, A, B, B2;
+  Init(A, 15, 1);
+  Init(B, 1, 100000);
+  Init(B2, 100000, 1);
 
   if (pid == 1) {
     // Reconstruct the random mask
@@ -79,9 +78,9 @@ int main(int argc, char** argv) {
     mpc.RandMat(Y2, 15, 10000);
     mpc.RandMat(Y3, 15, 100000);
 
-  //   mpc.RandMat(A, 15, 1);
-  //   mpc.RandMat(B, 1, 100000);
-  //   mpc.RandMat(B2, 100000, 1);
+    mpc.RandMat(A, 15, 1);
+    mpc.RandMat(B, 1, 100000);
+    mpc.RandMat(B2, 100000, 1);
     mpc.RestoreSeed();
   } else if (pid == 2) {
     // Generate data
@@ -89,42 +88,62 @@ int main(int argc, char** argv) {
     mpc.RandMat(Y2, 15, 10000);
     mpc.RandMat(Y3, 15, 100000);
 
-  //   mpc.RandMat(A, 15, 1);
-  //   mpc.RandMat(B, 1, 100000);
-  //   mpc.RandMat(B2, 100000, 1);
+    mpc.RandMat(A, 15, 1);
+    mpc.RandMat(B, 1, 100000);
+    mpc.RandMat(B2, 100000, 1);
     
-  //   // Mask out data
+    // Mask out data
     cout << "Masking data ... ";
     Mat<ZZ_p> r1, r2, r3;
     mpc.SwitchSeed(1);
     mpc.RandMat(r1, 15, 1000);
     mpc.RandMat(r2, 15, 10000);
     mpc.RandMat(r3, 15, 100000);
-  //   Mat<ZZ_p> r4, r5, r6;
-  //   mpc.RandMat(r4, 15, 1);
-  //   mpc.RandMat(r5, 1, 100000);
-  //   mpc.RandMat(r6, 100000, 1);
+    Mat<ZZ_p> r4, r5, r6;
+    mpc.RandMat(r4, 15, 1);
+    mpc.RandMat(r5, 1, 100000);
+    mpc.RandMat(r6, 100000, 1);
     mpc.RestoreSeed();
     Y1 -= r1;
     Y2 -= r2;
     Y3 -= r3;
-  //   A -= r4;
-  //   B -= r5;
-  //   B2 -= r6;
+    A -= r4;
+    B -= r5;
+    B2 -= r6;
     cout << "done" << endl;
   }
 
-  for (int i = 0; i < 3; i++) { cout << "Trunc (15 x 2,000) ... "; tic(); mpc.Trunc(Y1); toc(); }
+  for (int i = 0; i < 5; i++) {
+    mpc.FastMultMat(C, A, Y1);
+    cout << "Trunc (15 x 2,000) ... "; tic(); mpc.Trunc(C); toc();
+  }
   cout << "---" << endl;
-  for (int i = 0; i < 3; i++) { cout << "Trunc (15 x 20,000) ... "; tic(); mpc.Trunc(Y2); toc(); }
+  for (int i = 0; i < 5; i++) {
+    mpc.FastMultMat(C, A, Y2);
+    cout << "Trunc (15 x 20,000) ... "; tic(); mpc.Trunc(C); toc();
+  }
   cout << "---" << endl;
-  for (int i = 0; i < 3; i++) { cout << "Trunc (15 x 200,000) ... "; tic(); mpc.Trunc(Y3); toc(); }
+  for (int i = 0; i < 5; i++) {
+    mpc.FastMultMat(C, A, Y3);
+    cout << "Trunc (15 x 200,000) ... "; tic(); mpc.Trunc(C); toc();
+  }
   cout << "-----------" << endl;
-  for (int i = 0; i < 3; i++) { cout << "FastTrunc (15 x 2,000) ... "; tic(); mpc.FastTrunc(Y1); toc(); }
+
+  for (int i = 0; i < 5; i++) {
+    mpc.FastMultMat(C, A, Y1);
+    cout << "Trunc (15 x 2,000) ... "; tic(); mpc.FastTrunc(C); toc();
+  }
   cout << "---" << endl;
-  for (int i = 0; i < 3; i++) { cout << "FastTrunc (15 x 20,000) ... "; tic(); mpc.FastTrunc(Y2); toc(); }
+  for (int i = 0; i < 5; i++) {
+    mpc.FastMultMat(C, A, Y2);
+    cout << "Trunc (15 x 20,000) ... "; tic(); mpc.FastTrunc(C); toc();
+  }
   cout << "---" << endl;
-  for (int i = 0; i < 3; i++) { cout << "FastTrunc (15 x 200,000) ... "; tic(); mpc.FastTrunc(Y3); toc(); }
+  for (int i = 0; i < 5; i++) {
+    mpc.FastMultMat(C, A, Y3);
+    cout << "Trunc (15 x 200,000) ... "; tic(); mpc.FastTrunc(C); toc();
+  }
+
   // // cout << "Serial: Mult (15 by 1) x (1 x 100k) ... "; tic(); mpc.MultMat(C, A, B); toc();
   // // cout << "Serial: Trunc 15 by 100k ... "; tic(); mpc.Trunc(C); toc();
   // // cout << "----" << endl;
