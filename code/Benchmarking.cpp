@@ -113,22 +113,24 @@ int main(int argc, char** argv) {
     cout << "done" << endl;
   }
 
+  SetNumThreads(Param::NUM_THREADS);
   for (int i = 0; i < 5; i++) {
-    mpc.FastMultMat(C, A, Y1);
+    mpc.MultMat(C, A, Y1);
     cout << "Trunc (15 x 2,000) ... "; tic(); mpc.Trunc(C); toc();
   }
   cout << "---" << endl;
   for (int i = 0; i < 5; i++) {
-    mpc.FastMultMat(C, A, Y2);
+    mpc.MultMat(C, A, Y2);
     cout << "Trunc (15 x 20,000) ... "; tic(); mpc.Trunc(C); toc();
   }
   cout << "---" << endl;
   for (int i = 0; i < 5; i++) {
-    mpc.FastMultMat(C, A, Y3);
+    mpc.MultMat(C, A, Y3);
     cout << "Trunc (15 x 200,000) ... "; tic(); mpc.Trunc(C); toc();
   }
   cout << "-----------" << endl;
 
+  SetNumThreads(1);
   for (int i = 0; i < 5; i++) {
     mpc.FastMultMat(C, A, Y1);
     cout << "Trunc (15 x 2,000) ... "; tic(); mpc.FastTrunc(C); toc();
