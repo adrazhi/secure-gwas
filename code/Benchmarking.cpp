@@ -32,8 +32,8 @@ int main(int argc, char** argv) {
 
   string pid_str(argv[1]);
   int pid;
-  if (!Param::Convert(pid_str, pid, "party_id") || pid < 0 || pid > 2) {
-    cout << "Error: party_id should be 0, 1, or 2" << endl;
+  if (!Param::Convert(pid_str, pid, "party_id") || pid < 0 || pid > 3) {
+    cout << "Error: party_id should be 0, 1, 2, or 3" << endl;
     return 1;
   }
 
