@@ -521,6 +521,7 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid, int n, int chunk_id) {
 
   tic();
   for (int i = 0; i < n; i++) {
+    tick();
     Mat<ZZ_p> g;
     Vec<ZZ_p> miss, p;
 
@@ -545,6 +546,8 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid, int n, int chunk_id) {
       mpc.WriteToFile(g, fs);
       mpc.WriteToFile(miss, fs);
     }
+
+    cout << "i = " << i << ", "; tock();
 
     if ((i + 1) % bsize == 0 || i == n - 1) {
       cout << "\t" << i+1 << " / " << n << ", "; toc(); tic();
