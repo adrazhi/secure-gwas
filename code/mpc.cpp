@@ -14,22 +14,6 @@
 using namespace NTL;
 using namespace std;
 
-using msec = chrono::milliseconds;
-using get_time = chrono::steady_clock;
-
-auto start = get_time::now();
-
-void tick() {
-  start = get_time::now();
-}
-
-int tock() {
-  auto clock_end = get_time::now();
-  int duration = chrono::duration_cast<msec>(clock_end - start).count();
-  cout << "Elapsed time is " << duration / 1000.0 << " secs" << endl;
-  return duration;
-}
-
 bool MPCEnv::Initialize(int pid, vector< pair<int, int> > &pairs) {
   cout << "Initializing MPC environment" << endl;
 
