@@ -15,19 +15,15 @@
 #include <sstream>
 #include <random>
 #include <vector>
+#include <chrono>
 
 using namespace NTL;
 using namespace std;
 
-void print_vec(const char* name, vector<double> &vect, int num) {
-  cout << name << ": ";
-  for (int i = 0; i < num; i++) {
-    cout << vect[i] << "  ";
-  }
-  cout << endl;
-}
+using msec = chrono::milliseconds;
+using get_time = chrono::steady_clock;
 
-void print_ntl_vec(const char* name, Vec<double> &vect, int num) {
+void print_vec(const char* name, vector<double> &vect, int num) {
   cout << name << ": ";
   for (int i = 0; i < num; i++) {
     cout << vect[i] << "  ";
@@ -53,9 +49,10 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // vector<int> num_threads{ 1, 2, 4, 8, 16, 32, 64 };
-  vector<int> num_threads{ 32, 40, 64 };
+  vector<int> num_threads{ 1, 2, 4, 8, 16, 32, 64 };
   Param::NUM_THREADS = 64; // need this so that mpc.Initialize will create enough channels/prgs for up to 16 threads
+
+  int n_trials = 5;
 
   string n_str(argv[3]);
   long n = stoi(n_str);
@@ -78,14 +75,16 @@ int main(int argc, char** argv) {
   Init(b, n);
   Init(c1, n);
   Init(c2, n);
-  Vec<double> c1_base;
-  Vec<double> c2_base;
+
+  Mat<ZZ_p> Y, Q;
+  Init(Y, 15, n);
 
   if (pid == 1) {
     // Reconstruct the random mask
     mpc.SwitchSeed(2);
     mpc.RandVec(a, n);
     mpc.RandVec(b, n);
+    mpc.RandMat(Y, 15, n);
     mpc.RestoreSeed();
   } else if (pid == 2) {
     // Generate vectors of random doubles to simulate data
@@ -107,16 +106,22 @@ int main(int argc, char** argv) {
       DoubleToFP(b[i], b_base[i], Param::NBIT_K, Param::NBIT_F);
     }
     cout << "done" << endl;
+
+    // Generate random matrix
+    mpc.RandMat(Y, 15, n);
     
     // Now generate the random mask and mask out the data
     cout << "Masking data ... ";
     Vec<ZZ_p> ra, rb;
+    Mat<ZZ_p> rY;
     mpc.SwitchSeed(1);
     mpc.RandVec(ra, n);
     mpc.RandVec(rb, n);
+    mpc.RandMat(rY, 15, n);
     mpc.RestoreSeed();
     a -= ra;
     b -= rb;
+    Y -= rY;
     cout << "done" << endl;
   }
 
@@ -127,6 +132,7 @@ int main(int argc, char** argv) {
   bool fpdiv = true;
   bool fpsqrt = true;
   bool ispos = true;
+  bool orth = true;
   bool print_output = false;
 
   for (int i = 0; i < num_threads.size(); i++) {
@@ -136,69 +142,69 @@ int main(int argc, char** argv) {
 
     // Profile FPDivParallel
     if (fpdiv) {
-      gettimeofday(&start, NULL); 
-      ios_base::sync_with_stdio(false);
-      mpc.FPDivParallel(c1, a, b);
-      gettimeofday(&end, NULL);
-      mpc.RevealSym(c1);
+      auto start = get_time::now();
+      for (int i = 0; i < n_trials; i++) {
+        mpc.FPDivParallel(c1, a, b);
+      }
+      auto end = get_time::now();
 
       // Print results
-      runtime = (end.tv_sec - start.tv_sec) * 1e6;
-      runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-      FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
-      if (pid == 2) {
-        cout << "Division Runtime: " << fixed << runtime << setprecision(6); 
-        cout << " sec" << endl;
-        if (print_output) print_ntl_vec("Division Result", c1_base, 5);
-        cout << endl;
+      int runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
+      cout << "Avg Division Runtime: " << runtime << "sec" << endl;
+      if (print_output) {
+        cout << "Division Result: ";
+        mpc.PrintFP(c1, 5);
       }
     }
 
     // Profile FPSqrtParallel
     if (fpsqrt) {
-      gettimeofday(&start, NULL); 
-      ios_base::sync_with_stdio(false);
-      mpc.FPSqrtParallel(c1, c2, a);
-      gettimeofday(&end, NULL);
-      mpc.RevealSym(c1);
-      mpc.RevealSym(c2);
+      auto start = get_time::now();
+      for (int i = 0; i < n_trials; i++) {
+        mpc.FPSqrtParallel(c1, c2, a);
+      }
+      auto end = get_time::now();
 
       // Print results
-      runtime = (end.tv_sec - start.tv_sec) * 1e6;
-      runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-      FPToDouble(c1_base, c1, Param::NBIT_K, Param::NBIT_F);
-      FPToDouble(c2_base, c2, Param::NBIT_K, Param::NBIT_F);
-      if (pid == 2) {
-        cout << "Square Root Runtime: " << fixed << runtime << setprecision(6); 
-        cout << " sec" << endl;
-        if (print_output) {
-          print_ntl_vec("Square Root Result 1", c1_base, 5);
-          print_ntl_vec("Square Root Result 2", c2_base, 5);
-        }
-        cout << endl;
+      int runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
+      cout << "Avg Sqrt Runtime: " << runtime << "sec" << endl;
+      if (print_output) {
+        cout << "Sqrt Result 1: ";
+        mpc.PrintFP(c1, 5);
+        cout << "Sqrt Result 2: ";
+        mpc.PrintFP(c2, 5);
       }
     }
 
     // Profile IsPositiveParallel
     if (ispos) {
       Vec<ZZ_p> input = a - b;
-      gettimeofday(&start, NULL); 
-      ios_base::sync_with_stdio(false);
-      mpc.IsPositiveParallel(c1, input);
-      gettimeofday(&end, NULL);
-      mpc.RevealSym(c1);
+      auto start = get_time::now();
+      for (int i = 0; i < n_trials; i++) {
+        mpc.IsPositiveParallel(c1, input);
+      }
+      auto end = get_time::now();
 
       // Print results
-      runtime = (end.tv_sec - start.tv_sec) * 1e6;
-      runtime = (runtime + (end.tv_usec - start.tv_usec)) * 1e-6;
-      if (pid == 2) {
-        cout << "IsPositive Runtime: " << fixed << runtime << setprecision(6); 
-        cout << " sec" << endl;
-      }
+      int runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
+      cout << "Avg IsPositive Runtime: " << runtime << "sec" << endl;
       if (print_output) {
         cout << "IsPositive Result: ";
-        mpc.Print(c1, 5);
+        mpc.PrintFP(c1, 5);
       }
+    }
+
+    // Profile OrthonormalBasis
+    if (orth) {
+      auto start = get_time::now();
+      for (int i = 0; i < n_trials; i++) {
+        mpc.OrthonormalBasis(Q, Y);
+      }
+      auto end = get_time::now();
+
+      // Print results
+      int runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
+      cout << "Avg OrthonormalBasis Runtime: " << runtime << "sec" << endl;
     }
   }
 

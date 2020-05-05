@@ -1511,28 +1511,6 @@ private:
     
     BeaverReconstruct(c, fid);
   }
-  // Optimized (multi-threaded) version
-  template<class T>
-  void FastMultAux(Mat<T>& c, Mat<T>& a, Mat<T>& b, bool elem_wise, int fid = 0) {
-    if (debug) cout << "FastMultAux: (" << a.NumRows() << ", " << a.NumCols() << "), (" << b.NumRows() << ", " << b.NumCols() << ")" << endl;
-    if (elem_wise) {
-      assert(a.NumRows() == b.NumRows() && a.NumCols() == b.NumCols());
-    } else {
-      assert(a.NumCols() == b.NumRows());
-    }
-
-    int out_rows = a.NumRows();
-    int out_cols = elem_wise ? a.NumCols() : b.NumCols();
-
-    Mat<T> ar, am, br, bm;
-    BeaverPartition(ar, am, a, fid);
-    BeaverPartition(br, bm, b, fid);
-
-    Init(c, out_rows, out_cols);
-    FastBeaverMult(c, ar, am, br, bm, elem_wise, fid);
-    
-    BeaverReconstruct(c, fid);
-  }
 
   template<class T>
   void MultAuxParallel(Vec< Mat<T> >& c, Vec< Mat<T> >& a, Vec< Mat<T> >& b, bool elem_wise, int fid = 0) {
