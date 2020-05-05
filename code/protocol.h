@@ -575,8 +575,10 @@ bool data_sharing_protocol(MPCEnv& mpc, int pid, int n, int chunk_id) {
 }
 
 bool gwas_protocol(MPCEnv& mpc, int pid) {
-  SetNumThreads(Param::NTL_NUM_THREADS);
-  cout << AvailableThreads() << " threads created for NTL" << endl;
+  if (Param::NUM_THREADS > 1) {
+    SetNumThreads(Param::NTL_NUM_THREADS);
+    cout << AvailableThreads() << " threads created for NTL" << endl;
+  }
   
   int n0 = 0; // total number of individuals across datasets
   for (int i = 0; i < Param::NUM_INDS.size(); i++) {
