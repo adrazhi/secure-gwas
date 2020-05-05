@@ -125,9 +125,6 @@ int main(int argc, char** argv) {
     cout << "done" << endl;
   }
 
-  struct timeval start, end;
-  double runtime;
-
   // output flags
   bool fpdiv = true;
   bool fpsqrt = true;
@@ -149,7 +146,7 @@ int main(int argc, char** argv) {
       auto end = get_time::now();
 
       // Print results
-      int runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
+      double runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
       cout << "Avg Division Runtime: " << runtime << "sec" << endl;
       if (print_output) {
         cout << "Division Result: ";
@@ -166,7 +163,7 @@ int main(int argc, char** argv) {
       auto end = get_time::now();
 
       // Print results
-      int runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
+      double runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
       cout << "Avg Sqrt Runtime: " << runtime << "sec" << endl;
       if (print_output) {
         cout << "Sqrt Result 1: ";
@@ -186,7 +183,7 @@ int main(int argc, char** argv) {
       auto end = get_time::now();
 
       // Print results
-      int runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
+      double runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
       cout << "Avg IsPositive Runtime: " << runtime << "sec" << endl;
       if (print_output) {
         cout << "IsPositive Result: ";
@@ -203,7 +200,7 @@ int main(int argc, char** argv) {
       auto end = get_time::now();
 
       // Print results
-      int runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
+      double runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
       cout << "Avg OrthonormalBasis Runtime: " << runtime << "sec" << endl;
     }
   }
