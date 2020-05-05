@@ -49,7 +49,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  vector<int> num_threads{ 1, 2, 4, 8, 16, 32};
+  // vector<int> num_threads{ 1, 2, 4, 8, 16, 32};
+  vector<int> num_threads{ 16, 32};
   Param::NUM_THREADS = 32; // need this so that mpc.Initialize will create enough channels/prgs for max number of threads
 
   string n_str(argv[3]);
