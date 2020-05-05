@@ -175,7 +175,7 @@ bool send_stream(string data_dir, MPCEnv& mpc, int mode, long start_line, long n
 
 int main(int argc, char** argv) {
   if (argc < 4) {
-    cout << "Usage: DataSharingClient party_id param_file round_number [num_threads] [data_dir (for P3/SP)]" << endl;
+    cout << "Usage: DataSharingClient party_id param_file round_number [data_dir (for P3/SP)] [num_threads] " << endl;
     return 1;
   }
 
@@ -194,11 +194,6 @@ int main(int argc, char** argv) {
   string round_str(argv[3]);
   Param::Convert(round_str, Param::CUR_ROUND, "CUR_ROUND");
 
-  // If not in chunked mode, Data Sharing code should not be multi-threaded
-  if (!Param::CHUNK_MODE) {
-    Param::NUM_THREADS = 1;
-  }
-  
   string data_dir;
   if (pid == 3) {
     if (argc < 5) {
@@ -213,6 +208,22 @@ int main(int argc, char** argv) {
 
     cout << "Data directory: " << data_dir << endl;
   }
+
+  // figure out if num_threads optional parameter was given
+  int opt_arg_index = 4;
+  if (pid == 3) {
+    opt_arg_index = 5;
+  }
+  if (argc == opt_arg_index + 1) {
+    string num_threads_str(argv[opt_arg_index]);
+    int num_threads = stoi(num_threads_str);
+    Param::NUM_THREADS = num_threads;
+  }
+  // If not in chunked mode, Data Sharing code should not be multi-threaded
+  if (!Param::CHUNK_MODE) {
+    Param::NUM_THREADS = 1;
+  }
+  cout << "Number of threads: " << Param::NUM_THREADS << endl;
 
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));
