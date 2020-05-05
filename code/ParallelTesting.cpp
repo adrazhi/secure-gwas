@@ -49,14 +49,18 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  vector<int> num_threads{ 1, 2, 4, 8, 16, 32, 64 };
-  Param::NUM_THREADS = 64; // need this so that mpc.Initialize will create enough channels/prgs for up to 16 threads
-
-  int n_trials = 5;
+  vector<int> num_threads{ 1, 2, 4, 8, 16, 32};
+  Param::NUM_THREADS = 32; // need this so that mpc.Initialize will create enough channels/prgs for max number of threads
 
   string n_str(argv[3]);
   long n = stoi(n_str);
-  cout << "Number of elements in array: " << n << endl; 
+  cout << "Number of elements in array: " << n << endl;
+
+  int n_trials = 5;
+  if (argc == 5) {
+    string n_tr(argv[4]);
+    n_trials = stoi(n_tr);
+  }
 
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));
@@ -147,7 +151,7 @@ int main(int argc, char** argv) {
 
       // Print results
       double runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
-      cout << "Avg Division Runtime: " << runtime << "sec" << endl;
+      cout << "Avg Division Runtime: " << runtime << " sec" << endl;
       if (print_output) {
         cout << "Division Result: ";
         mpc.PrintFP(c1, 5);
@@ -164,7 +168,7 @@ int main(int argc, char** argv) {
 
       // Print results
       double runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
-      cout << "Avg Sqrt Runtime: " << runtime << "sec" << endl;
+      cout << "Avg Sqrt Runtime: " << runtime << " sec" << endl;
       if (print_output) {
         cout << "Sqrt Result 1: ";
         mpc.PrintFP(c1, 5);
@@ -184,7 +188,7 @@ int main(int argc, char** argv) {
 
       // Print results
       double runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
-      cout << "Avg IsPositive Runtime: " << runtime << "sec" << endl;
+      cout << "Avg IsPositive Runtime: " << runtime << " sec" << endl;
       if (print_output) {
         cout << "IsPositive Result: ";
         mpc.PrintFP(c1, 5);
@@ -201,7 +205,7 @@ int main(int argc, char** argv) {
 
       // Print results
       double runtime = chrono::duration_cast<msec>(end - start).count() / (n_trials * 1000.0);
-      cout << "Avg OrthonormalBasis Runtime: " << runtime << "sec" << endl;
+      cout << "Avg OrthonormalBasis Runtime: " << runtime << " sec" << endl;
     }
   }
 

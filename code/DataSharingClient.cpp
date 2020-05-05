@@ -175,7 +175,7 @@ bool send_stream(string data_dir, MPCEnv& mpc, int mode, long start_line, long n
 
 int main(int argc, char** argv) {
   if (argc < 4) {
-    cout << "Usage: DataSharingClient party_id param_file round_number [data_dir (for P3/SP)]" << endl;
+    cout << "Usage: DataSharingClient party_id param_file round_number [num_threads] [data_dir (for P3/SP)]" << endl;
     return 1;
   }
 
@@ -198,7 +198,7 @@ int main(int argc, char** argv) {
   if (!Param::CHUNK_MODE) {
     Param::NUM_THREADS = 1;
   }
-
+  
   string data_dir;
   if (pid == 3) {
     if (argc < 5) {
