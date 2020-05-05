@@ -82,12 +82,18 @@ int main(int argc, char** argv) {
   print_vec("NUM_INDS", Param::NUM_INDS, Param::NUM_INDS.size());
   print_vec("CACHE_FILE_PREFIX", Param::CACHE_FILE_PREFIX, Param::CACHE_FILE_PREFIX.size());
 
-  if (argc == 4) {
+  if (argc >= 4) {
     string num_threads_str(argv[3]);
     int num_threads = stoi(num_threads_str);
     Param::NUM_THREADS = num_threads;
   }
   cout << "Number of threads: " << Param::NUM_THREADS << endl;
+
+  if (argc >= 5) {
+    string ntl_num_threads_str(argv[4]);
+    int ntl_num_threads = stoi(ntl_num_threads_str);
+    Param::NTL_NUM_THREADS = ntl_num_threads;
+  }
 
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));
