@@ -38,6 +38,6 @@ DEBUG 1
 
 # FILES
 KEY_PATH ../key/
-SNP_POS_FILE ../toy_data/pos.txt
+SNP_POS_FILE ../toy_data2/pos.txt
 LOG_FILE ../log/test_P0.txt
 CACHE_FILE_PREFIX ../cache/test_P0
