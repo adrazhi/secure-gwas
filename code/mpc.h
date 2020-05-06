@@ -47,7 +47,6 @@ public:
   void QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A);
   // Optimized for memory (need to call this on a large matrix)
   void OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A);
-  void OrthonormalBasisParallel(Mat<ZZ_p>& Q, Mat<ZZ_p>& A);
   void Tridiag(Mat<ZZ_p>& T, Mat<ZZ_p>& Q, Mat<ZZ_p>& A);
   void EigenDecomp(Mat<ZZ_p>& V, Vec<ZZ_p>& L, Mat<ZZ_p>& A);
 
