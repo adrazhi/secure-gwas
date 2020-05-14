@@ -4,6 +4,7 @@
 #include "util.h"
 #include "NTL/ZZ_p.h"
 #include "gwasiter.h"
+#include <NTL/BasicThreadPool.h>
 
 #include <bits/stdc++.h>
 #include <sys/time.h>
@@ -51,7 +52,7 @@ int main(int argc, char** argv) {
 
   // vector<int> num_threads{ 1, 2, 4, 8, 16, 32};
   vector<int> num_threads{ 16, 32};
-  Param::NUM_THREADS = 32; // need this so that mpc.Initialize will create enough channels/prgs for max number of threads
+  Param::NUM_THREADS = 1; // need this so that mpc.Initialize will create enough channels/prgs for max number of threads
 
   string n_str(argv[3]);
   long n = stoi(n_str);
@@ -138,9 +139,11 @@ int main(int argc, char** argv) {
   bool print_output = false;
 
   for (int i = 0; i < num_threads.size(); i++) {
-    Param::NUM_THREADS = num_threads[i];
+    // Param::NUM_THREADS = num_threads[i];
+    SetNumThreads(num_threads[i]);
     cout << "-----------------" << endl;
-    cout << "Number of Threads: " << Param::NUM_THREADS << endl;
+    // cout << "Number of Threads: " << Param::NUM_THREADS << endl;
+    cout << "Number of NTL Threads: " << num_threads[i] << endl;
 
     // Profile FPDivParallel
     if (fpdiv) {
