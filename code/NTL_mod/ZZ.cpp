@@ -2024,7 +2024,7 @@ long RandomLen_long(long l)
 long RandomBnd(long bnd)
 {
    RandomStream& stream = LocalGetCurrentRandomStream();
-   RandomBnd(bnd, stream);
+   return RandomBnd(bnd, stream);
 }
 
 long RandomBnd(long bnd, RandomStream& stream)
