@@ -24,6 +24,8 @@ bool Param::ConvertVector(string s, vector<T> &var, string name) {
   return true;
 }
 
+// Function for converting/storing parameter values for port numbers
+// Instead of storing all port numbers in the parameter file, simply store the one corresponding to this round
 template<class T>
 bool Param::ConvertPort(string s, T &var, string name) {
   istringstream iss(s);
@@ -93,8 +95,6 @@ bool Param::ParseFile(const char *param_file) {
       ret = Convert(v, Param::NTL_NUM_THREADS, k);
     } else if (k == "NUM_THREADS") {
       ret = Convert(v, Param::NUM_THREADS, k);
-    } else if (k == "CHUNK_MODE") {
-      ret = Convert(v, Param::CHUNK_MODE, k);
     } else if (k == "NUM_CHUNKS") {
       ret = ConvertVector(v, Param::NUM_CHUNKS, k);
     } else if (k == "MPC_BUF_SIZE") {
@@ -209,7 +209,6 @@ long Param::PITER_BATCH_SIZE = 100;
 long Param::PAR_THRES = 50;
 long Param::NTL_NUM_THREADS = 1;
 long Param::NUM_THREADS = 20;
-bool Param::CHUNK_MODE = false;
 vector<long> Param::NUM_CHUNKS;
 
 bool Param::SKIP_QC = false;

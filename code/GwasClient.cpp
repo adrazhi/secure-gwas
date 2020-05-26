@@ -17,6 +17,7 @@
 using namespace NTL;
 using namespace std;
 
+// simple helper method to print a vector
 template <class T>
 void print_vec(const char* name, vector<T> &vect, int num) {
   cout << name << ": ";
@@ -39,7 +40,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // reset the current round
+  // reset the round number, since all datasets will be joined during GWAS execution
   Param::CUR_ROUND = 0;
 
   if (!Param::ParseFile(argv[2])) {
@@ -47,31 +48,36 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // pre-process the param before running GWAS
+  // pre-process the param class before running GWAS
+  // in particular, we want to create a list of cache file prefixes for every chunk that was created during Data Sharing,
+  // and we want to update the NUM_INDS vector correspondingly so that NUM_INDS[i] = size(chunk[i])
   int n = Param::NUM_INDS.size();
   int total_chunks = 0;
+  // iterate over all datasets
   for (int i = 0; i < n; i++) {
     int num_chunks = Param::NUM_CHUNKS[i];
     total_chunks += num_chunks;
 
-    // expand out the numbers of individuals
+    // replicate the chunk division that was used to split datasets during Data Sharing
     long total = Param::NUM_INDS[i];
     long chunk_size = ceil(total / ((double) num_chunks));
     num_chunks = ceil(total / ((double) chunk_size)); 
     long remainder = total - ((num_chunks - 1) * chunk_size);
+
+    // append each chunk size to the end of the NUM_INDS vector
     for (int j = 0; j < num_chunks - 1; j++) {
       Param::NUM_INDS.push_back(chunk_size);
     }
     Param::NUM_INDS.push_back(remainder);
 
-    // expand out the cache file prefixes
+    // append each chunk file prefix to the end of the CACHE_FILE_PREFIX vector
     for (int j = 0; j < num_chunks; j++) {
       string pref = Param::CACHE_FILE_PREFIX[i] + "_" + to_string(j);
       Param::CACHE_FILE_PREFIX.push_back(pref);
     }
   }
 
-  // now get rid of old values
+  // now get rid of old values that correspond to dataset information instead of chunk information
   for (int i = n; i < n + total_chunks; i++) {
     Param::NUM_INDS[i-n] = Param::NUM_INDS[i];
     Param::CACHE_FILE_PREFIX[i-n] = Param::CACHE_FILE_PREFIX[i];
@@ -82,18 +88,7 @@ int main(int argc, char** argv) {
   print_vec("NUM_INDS", Param::NUM_INDS, Param::NUM_INDS.size());
   print_vec("CACHE_FILE_PREFIX", Param::CACHE_FILE_PREFIX, Param::CACHE_FILE_PREFIX.size());
 
-  if (argc >= 4) {
-    string num_threads_str(argv[3]);
-    int num_threads = stoi(num_threads_str);
-    Param::NUM_THREADS = num_threads;
-  }
   cout << "Number of threads: " << Param::NUM_THREADS << endl;
-
-  if (argc >= 5) {
-    string ntl_num_threads_str(argv[4]);
-    int ntl_num_threads = stoi(ntl_num_threads_str);
-    Param::NTL_NUM_THREADS = ntl_num_threads;
-  }
 
   vector< pair<int, int> > pairs;
   pairs.push_back(make_pair(0, 1));

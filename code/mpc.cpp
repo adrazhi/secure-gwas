@@ -229,16 +229,20 @@ bool MPCEnv::SetupChannels(vector< pair<int, int> > &pairs) {
       port = port + 5 * thread;
 
       if (thread == 0) {
+        // create an outer layer map to hold sockets for this party
         sockets.insert(make_pair(pother, map<int, CSocket>()));
       }
+      // now insert the socket for this thread
       sockets.find(pother)->second.insert(map<int, CSocket>::value_type(thread, CSocket()));
 
       if (p1 == pid) {
+        // party with lower ID listens on its port
         if (!OpenChannel(sockets[pother][thread], port)) {
           cout << "Failed to connect with P" << pother << " on thread " << thread << endl;
           return false;
         }
       } else {
+        // party with higher ID connects to other party
         string ip_addr;
         if (pother == 0) {
           ip_addr = Param::IP_ADDR_P0;
@@ -793,8 +797,7 @@ void MPCEnv::Householder(Vec<ZZ_p>& v, Vec<ZZ_p>& x) {
   Init(v, n);
   BeaverMult(v, vr, vm, invr, invm);
   BeaverReconstruct(v);
-  // This call is the main bottleneck
-  FastTrunc(v);
+  FastTrunc(v); // This call is the only bottleneck
 }
 
 void MPCEnv::QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A) {
@@ -901,6 +904,7 @@ void MPCEnv::QRFactSquare(Mat<ZZ_p>& Q, Mat<ZZ_p>& R, Mat<ZZ_p>& A) {
   }
 }
 
+// Uses optimized FastTrunc and FastMultMat routines to speed up runtime
 void MPCEnv::OrthonormalBasis(Mat<ZZ_p>& Q, Mat<ZZ_p>& A) {
   if (debug) cout << "OrthonormalBasis: " << A.NumRows() << ", " << A.NumCols() << endl;
 
@@ -1430,6 +1434,8 @@ void MPCEnv::IsPositiveParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
     IsPositive(b, a);
     return;
   }
+
+  // to speed up runtime, divide vector into a series of chunks
   int n = a.length();
   int nbatch = Param::NUM_THREADS;
   int batch_size = ceil(n / ((double) nbatch));
@@ -1446,6 +1452,7 @@ void MPCEnv::IsPositiveParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& a) {
 
   b.SetLength(n);
 
+  // now perform IsPositive operation on each chunk in parallel
   #pragma omp parallel for num_threads(Param::NUM_THREADS)
   for (int i = 0; i < nbatch; i++) {
     int start = batch_size * i;
@@ -1598,6 +1605,8 @@ void MPCEnv::FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
     FPSqrt(b, b_inv, a);
     return;
   }
+
+  // to speed up runtime, divide vector into a series of chunks
   int n = a.length();
   int nbatch = Param::NUM_THREADS;
   int batch_size = ceil(n / ((double) nbatch));
@@ -1615,6 +1624,7 @@ void MPCEnv::FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a) {
   b.SetLength(n);
   b_inv.SetLength(n);
 
+  // now perform FPSqrt operation on each chunk in parallel
   #pragma omp parallel for num_threads(Param::NUM_THREADS)
   for (int i = 0; i < nbatch; i++) {
     int start = batch_size * i;
@@ -1769,6 +1779,8 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
     FPDiv(c, a, b);
     return;
   }
+
+  // to speed up runtime, divide vector into a series of chunks
   int n = a.length();
   int nbatch = Param::NUM_THREADS;
   int batch_size = ceil(n / ((double) nbatch));
@@ -1785,6 +1797,7 @@ void MPCEnv::FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b) {
 
   c.SetLength(n);
 
+  // now perform FPDiv operation on each chunk in parallel
   #pragma omp parallel for num_threads(Param::NUM_THREADS)
   for (int i = 0; i < nbatch; i++) {
     int start = batch_size * i;
@@ -2836,6 +2849,7 @@ void MPCEnv::FastMultMat(Mat<ZZ_p>& c, Mat<ZZ_p>& a, Mat<ZZ_p>& b) {
 
   int num_threads = (Param::NUM_THREADS <= out_rows) ? Param::NUM_THREADS : out_rows;
 
+  // speed up runtime by multiplying each row of A by B in parallel
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < out_rows; i++) {
     // to avoid error with multiple threads

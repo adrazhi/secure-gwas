@@ -175,7 +175,7 @@ bool send_stream(string data_dir, MPCEnv& mpc, int mode, long start_line, long n
 
 int main(int argc, char** argv) {
   if (argc < 4) {
-    cout << "Usage: DataSharingClient party_id param_file round_number [data_dir (for P3/SP)] [num_threads] " << endl;
+    cout << "Usage: DataSharingClient party_id param_file round_number [data_dir (for P3/SP)]" << endl;
     return 1;
   }
 
@@ -191,13 +191,14 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  // the round number is used to identify which dataset is currently being secret-shared
   string round_str(argv[3]);
   Param::Convert(round_str, Param::CUR_ROUND, "CUR_ROUND");
 
   string data_dir;
   if (pid == 3) {
     if (argc < 5) {
-      cout << "Error: for P3/SP, data directory should be provided as the last argument" << endl;
+      cout << "Error: for P3/SP, data directory should be provided as the fourth argument" << endl;
       return 1;
     }
 
@@ -209,18 +210,8 @@ int main(int argc, char** argv) {
     cout << "Data directory: " << data_dir << endl;
   }
 
-  // figure out if num_threads optional parameter was given
-  int opt_arg_index = 4;
-  if (pid == 3) {
-    opt_arg_index = 5;
-  }
-  if (argc == opt_arg_index + 1) {
-    string num_threads_str(argv[opt_arg_index]);
-    int num_threads = stoi(num_threads_str);
-    Param::NUM_THREADS = num_threads;
-  }
-  // If not in chunked mode, Data Sharing code should not be multi-threaded
-  if (!Param::CHUNK_MODE) {
+  // jf not in chunked mode, the Data Sharing code should not be multi-threaded
+  if (Param::NUM_CHUNKS[Param::CUR_ROUND] == 1) {
     Param::NUM_THREADS = 1;
   }
   cout << "Number of threads: " << Param::NUM_THREADS << endl;
@@ -240,10 +231,7 @@ int main(int argc, char** argv) {
   }
 
   // divide up the dataset into chunks
-  int num_chunks = 1;
-  if (Param::CHUNK_MODE) {
-    num_chunks = Param::NUM_CHUNKS[Param::CUR_ROUND];
-  }
+  int num_chunks = Param::NUM_CHUNKS[Param::CUR_ROUND];
   long total_lines = Param::NUM_INDS[Param::CUR_ROUND];
   long chunk_size = ceil(total_lines / ((double) num_chunks));
   num_chunks = ceil(total_lines / ((double) chunk_size)); // this is necessary to avoid edge case due to ceiling operator
@@ -256,8 +244,10 @@ int main(int argc, char** argv) {
   ios_base::sync_with_stdio(false);
   bool success = true;
   if (pid < 3) {
+    // CPs spawn a new thread for each chunk, and receive those chunks in parallel
     #pragma omp parallel for num_threads(Param::NUM_THREADS)
     for (int i = 0; i < num_chunks; i++) {
+      // split data into chunks evenly, with the exception of the last chunk
       long start_line = chunk_size * i;
       long end_line = start_line + chunk_size;
       if (end_line > total_lines) {
@@ -272,8 +262,10 @@ int main(int argc, char** argv) {
       success = data_sharing_protocol(mpc, pid, num_lines, i);
     }
   } else {
+    // SP also spawns a new thread for each chunk, streaming those chunks in parallel
     #pragma omp parallel for num_threads(Param::NUM_THREADS)
     for (int i = 0; i < num_chunks; i++) {
+      // split data into chunks evenly except for last chunk, to replicate behavior that CPs use for chunk sizes
       long start_line = chunk_size * i;
       long end_line = start_line + chunk_size;
       if (end_line > total_lines) {

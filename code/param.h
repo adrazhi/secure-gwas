@@ -68,9 +68,9 @@ class Param {
     static int CUR_ROUND;
 
     /* Data dimensions */
-    static vector<long> NUM_INDS; // number of individuals in each dataset
-    static long NUM_SNPS; // number of SNPs
-    static long NUM_COVS; // number of covariate features
+    static vector<long> NUM_INDS; // number of individuals in each input dataset
+    static long NUM_SNPS; // number of SNPs in every input dataset
+    static long NUM_COVS; // number of covariate features in every input dataset
 
     /* Software parameters */
     static uint64_t MPC_BUF_SIZE; // size of data buffer in bytes
@@ -79,7 +79,6 @@ class Param {
     static long PAR_THRES; // minimum threshold for NTL thread-boosting
     static long NTL_NUM_THREADS; // number of threads for NTL thread-boosting
     static long NUM_THREADS; // number of threads for custom multi-threading
-    static bool CHUNK_MODE; // represents whether we want to share each dataset chunkwise (in parallel)
     static vector<long> NUM_CHUNKS; // number of chunks per dataset for chunked data-sharing
 
     /* Global control */

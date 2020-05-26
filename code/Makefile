@@ -8,7 +8,7 @@ BUILD = build
 PROGS = bin
 
 SRC = crypto.cpp connect.cpp aesstream.cpp mpc.cpp param.cpp
-PROGNAMES = DataSharingClient GwasClient LogiRegClient GenerateKey ParallelTesting Benchmarking
+PROGNAMES = DataSharingClient GwasClient LogiRegClient GenerateKey Benchmarking
 
 OBJPATHS = $(patsubst %.cpp,$(BUILD)/%.o, $(SRC))
 TESTPATHS = $(addprefix $(PROGS)/, $(PROGNAMES))

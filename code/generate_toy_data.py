@@ -1,6 +1,8 @@
 import sys
 import numpy as np
 
+# This is a simple script for generating synthetic data to test GWAS
+
 dir_name = sys.argv[1]
 n = int(sys.argv[2])
 m = int(sys.argv[3])

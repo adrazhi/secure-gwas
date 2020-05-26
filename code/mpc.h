@@ -79,7 +79,6 @@ public:
   // void FPDivBase(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b);
 
   // Optimized (multi-threaded) versions of expensive long-vector subroutines
-  // These indirectly also enable speed ups in the following routines:
   void FPDivParallel(Vec<ZZ_p>& c, Vec<ZZ_p>& a, Vec<ZZ_p>& b);
   void FPSqrtParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& b_inv, Vec<ZZ_p>& a);
   void IsPositiveParallel(Vec<ZZ_p>& b, Vec<ZZ_p>& a); // used to enable speed up in (Not)LessThan(Public) routines
@@ -1365,7 +1364,12 @@ public:
     debug = flag;
   }
 
-  // Override of random function from ZZ_p.h that takes the random stream as input
+  // All Random Number Generation functions pass in a specific random stream as an argument
+  // to the base RNG function provided by NTL
+  // We then override NTL implementations of these base functions to use the specified random
+  // stream instead of the local random stream; these modifications can be found in the NTL_mod folder
+  // This allows different threads to efficiently sample random numbers in parallel
+
   inline void RandomZZ_p(ZZ_p& x, RandomStream& stream) {
     RandomBnd(x._ZZ_p__rep, ZZ_p::modulus(), stream);
   }
@@ -1474,7 +1478,7 @@ private:
 
   int pid;
   map<int, int> cur_prg_pid; // keyed by thread number
-  map<int, unsigned char*> buf_map; // thread-safe buffer for communication between CPs
+  map<int, unsigned char*> buf_map; // keyed by thread number, to allow thread-safe communication between CPs
   bool debug;
 
   Vec<ZZ> primes;

@@ -634,6 +634,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   Mat<ZZ_p> cov;
   Init(cov, n0, Param::NUM_COVS);
 
+  // check that values for every chunk of data exists in the cache
   for (int i = 0; i < num_datasets; i++) {
     if (!exists(cache(pid, i, "input_geno")) || !exists(cache(pid, i, "input_pheno_cov"))) {
       cout << "Initial data sharing results not found:" << endl;
@@ -645,6 +646,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   cout << "Initial data sharing results found" << endl;
 
+  // read phenotype and covariate data across chunks in parallel and consolidate into single vector/matrix
   #pragma omp parallel for num_threads(num_threads)
   for (int i = 0; i < num_datasets; i++) {
     long offset = 0;
@@ -742,7 +744,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         cout << "Taking a pass to calculate locus missing rates:" << endl; tick();
 
         if (pid > 0) {
-          // Loop over all datasets to calculate missing rate across all individuals
+          // Loop over all datasets/chunks to calculate missing rate across all individuals
           #pragma omp parallel for num_threads(num_threads)
           for (int i = 0; i < num_datasets; i++) {
             long inner_n0 = Param::NUM_INDS[i];
@@ -904,7 +906,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         mpc.ProfilerPushState("data_scan");
 
         if (pid > 0) {
-          // Loop over all datasets to calculate individual missing/heterozygous rate for all individuals
+          // Loop over all datasets/chunks to calculate individual missing/heterozygous rate for all individuals
           #pragma omp parallel for num_threads(num_threads)
           for (int i = 0; i < num_datasets; i++) {
             long offset = 0;
@@ -1109,7 +1111,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     long bsize = Param::PITER_BATCH_SIZE / num_threads;
     long report_bsize = n1 / 10;
 
-    // Loop over all datasets to calculate genotype statistics over all individuals
+    // Loop over all datasets/chunks to calculate genotype statistics over all individuals
     #pragma omp parallel for num_threads(num_threads)
     for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
       // Containers for batching the computation
@@ -1403,9 +1405,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   // Variance based on Bernoulli distribution over each allele
   Vec<ZZ_p> g_var_bern;
   mpc.MultElem(g_var_bern, maf, Maf);
-  cout << "Fast Trunc 1 ... "; tic();
   mpc.FastTrunc(g_var_bern);
-  cout << "done. "; toc();
 
   mpc.ProfilerPopState(true); // maf
 
@@ -1483,9 +1483,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       }
       g_exp_ctrl *= twoinv; // dosage_tot_ctrl is twice the # individuals we actually want
 
-      cout << "\tFast Trunc 2 ... "; tick();
       mpc.FastTrunc(g_exp_ctrl);
-      cout << "done. "; tock();
 
       cout << "\tCalculated expected genotype counts, "; toc(); tic();
 
@@ -1507,9 +1505,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
           }
 
           mpc.MultElem(diff, diff, diff); // square
-          cout << "\tFast Trunc 3 ... "; tick();
           mpc.FastTrunc(diff);
-          cout << "done. "; tock();
 
           mpc.ProfilerPushState("div");
           mpc.FPDivParallel(tmp_vec, diff, g_exp_ctrl[i]);
@@ -1679,7 +1675,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     cout << "Caching input data for PCA:" << endl; tick();
 
-    // Loop over all datasets
+    // Loop over all datasets/chunks
     #pragma omp parallel for num_threads(num_threads)
     for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
       tic();
@@ -1843,6 +1839,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       bucket_count[i] = 0;
     }
 
+    // Loop over all cached PCA datasets in parallel
     #pragma omp parallel for num_threads(num_threads)
     for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
       ifstream inner_ifs;
@@ -1932,9 +1929,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     kp = empty_slot;
     cout << "kp: " << kp << endl;
     Y_cur.SetDims(kp, m3);
-    cout << "Fast Trunc 4 ... "; tic();
     mpc.FastTrunc(Y_cur);
-    cout << "done. "; toc();
 
     mpc.ProfilerPopState(true); // rand_proj
 
@@ -1976,9 +1971,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     Y_cur_mask.kill();
 
     mpc.BeaverReconstruct(Y);
-    cout << "Fast Trunc 5 ... "; tic();
     mpc.FastTrunc(Y);
-    cout << "done. "; toc();
 
     /* Calculate orthonormal bases of Y */
     cout << "Initial orthonormal basis ... "; tic();
@@ -2005,13 +1998,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         mpc.BeaverMultElem(Q_scaled[i], Q[i], Q_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
       }
       mpc.BeaverReconstruct(Q_scaled);
-      if (pit == 0) {
-        cout << "Iter 1: Fast Trunc 1 ... "; tic();
-      }
       mpc.FastTrunc(Q_scaled);
-      if (pit == 0) {
-        cout << "done. "; toc();
-      }
 
       mpc.BeaverPartition(Q_scaled_mask, Q_scaled);
 
@@ -2022,13 +2009,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
                            g_mean_pca, g_mean_pca_mask);
       }
       mpc.BeaverReconstruct(Q_scaled_gmean);
-      if (pit == 0) {
-        cout << "Iter 1: Fast Trunc 2 ... "; tic();
-      }
       mpc.FastTrunc(Q_scaled_gmean);
-      if (pit == 0) {
-        cout << "done. "; toc();
-      }
 
       mpc.Transpose(Q_scaled); // m3-by-kp
       transpose(Q_scaled_mask, Q_scaled_mask); // m3-by-kp, unlike mpc.Transpose, P0 also transposes
@@ -2048,6 +2029,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         cout << "Iter 1: Data Scan 1 ... "; tic();
       }
 
+      // Loop over all cached PCA datasets in parallel
       #pragma omp parallel for num_threads(num_threads)
       for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
         mpc.ProfilerPushState("file_io");
@@ -2144,6 +2126,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         cout << "Iter 1: Data Scan 2 ... "; tic();
       }
 
+      // Loop over all cached PCA datasets
       #pragma omp parallel for num_threads(num_threads)
       for (int dataset_idx = 0; dataset_idx < num_datasets; dataset_idx++) {
         mpc.ProfilerPushState("file_io");
@@ -2237,13 +2220,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
                            g_mean_pca, g_mean_pca_mask);
       }
       mpc.BeaverReconstruct(gQ_adj_gmean);
-      if (pit == 0) {
-        cout << "Iter 1 Fast Trunc 3 ... "; tic();
-      }
       mpc.FastTrunc(gQ_adj_gmean);
-      if (pit == 0) {
-        cout << "done. "; toc();
-      }
 
       if (pid > 0) {
         gQ -= gQ_adj_gmean;
@@ -2260,13 +2237,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
         mpc.BeaverMultElem(gQ_scaled[i], gQ[i], gQ_mask[i], g_stdinv_pca, g_stdinv_pca_mask);
       }
       mpc.BeaverReconstruct(gQ_scaled);
-      if (pit == 0) {
-        cout << "Iter 1 Fast Trunc 4 ... "; tic();
-      }
       mpc.FastTrunc(gQ_scaled);
-      if (pit == 0) {
-        cout << "done. "; toc();
-      }
 
       mpc.ProfilerPushState("qr_m");
       if (pit == 0) {
@@ -2318,9 +2289,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
     ZZ_p fp_m2_inv = DoubleToFP(1 / ((double) m2), Param::NBIT_K, Param::NBIT_F);
     Z *= fp_m2_inv;
-    cout << "Fast Trunc 6 ... "; tic();
     mpc.FastTrunc(Z);
-    cout << "done. "; toc();
 
     mpc.Transpose(Z); // kp-by-n1
 
@@ -2334,9 +2303,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
       mpc.BeaverMult(Z_gram[i], Z, Z_mask, Z[i], Z_mask[i]);
     }
     mpc.BeaverReconstruct(Z_gram);
-    cout << "Fast Trunc 7 ... "; tic();
     mpc.FastTrunc(Z_gram);
-    cout << "done. "; toc();
 
     cout << "Constructed reduced eigenvalue problem" << endl;
 
@@ -2380,9 +2347,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     U_mask.kill();
     Z_mask.kill();
     mpc.BeaverReconstruct(V);
-    cout << "Fast Trunc 8 ... "; tic();
     mpc.FastTrunc(V);
-    cout << "done. "; toc();
 
     fs.open(cache(pid, "eigen").c_str(), ios::out | ios::binary);
     if (pid > 0) {
@@ -2437,9 +2402,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   Init(VVp, n1);
   mpc.BeaverMult(VVp, Vp, Vp_mask, V, V_mask);
   mpc.BeaverReconstruct(VVp);
-  cout << "Fast Trunc 9 ... "; tic();
   mpc.FastTrunc(VVp);
-  cout << "done. "; toc();
 
   Vec<ZZ_p> VVp_mask;
   mpc.BeaverPartition(VVp_mask, VVp);
@@ -2469,9 +2432,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   Init(u, n1);
   mpc.BeaverMult(u, V_sum, V_sum_mask, V, V_mask);
   mpc.BeaverReconstruct(u);
-  cout << "Fast Trunc 10 ... "; tic();
   mpc.FastTrunc(u);
-  cout << "done. "; toc();
   if (pid > 0) {
     u *= -1;
     mpc.AddPublic(u, fp_one);
@@ -2532,6 +2493,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
     mpc.ProfilerPushState("file_io/rng");
     cout << "GWAS pass:" << endl; tick();
     
+    // Loop over all datasets/chunks in parallel
     #pragma omp parallel for num_threads(num_threads)
     for (int dataset_idx = 0; dataset_idx < Param::NUM_INDS.size(); dataset_idx++) {
       Mat<ZZ_p> dosage, dosage_mask;
@@ -2750,9 +2712,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   Vec<ZZ_p> BB;
   mpc.InnerProd(BB, B); // m2
-  cout << "Fast Trunc 11 ... "; tic();
   mpc.FastTrunc(BB);
-  cout << "done. "; toc();
   if (pid > 0) {
     sxx -= BB;
   }
@@ -2775,9 +2735,7 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   sx *= fp_n1_inv;
   sp *= fp_n1_inv;
 
-  cout << "Fast Trunc 12 ... "; tic();
   mpc.FastTrunc(sx);
-  cout << "done. "; toc();
   mpc.Trunc(sp);
   mpc.Trunc(spp);
 
@@ -2804,13 +2762,9 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
   sp2 *= n1;
   sx2 *= n1;
 
-  cout << "Fast Trunc 13 ... "; tic();
   mpc.FastTrunc(spsx);
-  cout << "done. "; toc();
   mpc.Trunc(sp2);
-  cout << "Fast Trunc 14 ... "; tic();
   mpc.FastTrunc(sx2);
-  cout << "done. "; toc();
 
   Vec<ZZ_p> numer, denom;
   Init(numer, m2);
@@ -2851,14 +2805,10 @@ bool gwas_protocol(MPCEnv& mpc, int pid) {
 
   Vec<ZZ_p> z;
   mpc.MultElem(z, numer, denom1_sqrt_inv);
-  cout << "Fast Trunc 15 ... "; tic();
   mpc.FastTrunc(z);
-  cout << "done. "; toc();
 
   mpc.MultMat(z, z, denom2_sqrt_inv);
-  cout << "Fast Trunc 16 ... "; tic();
   mpc.FastTrunc(z);
-  cout << "done. "; toc();
 
   mpc.ProfilerPopState(false); // assoc_test
 
